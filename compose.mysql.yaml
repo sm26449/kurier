@@ -1,0 +1,43 @@
+# Overlay: bundled MySQL 8 for history, outbox, idempotency keys and the
+# inbound archive.
+#
+# Required in .env: MYSQL_ROOT_PASSWORD, MYSQL_PASSWORD.
+# Optional: MYSQL_DATABASE (default sms_gateway), MYSQL_USER (default sms_gateway).
+#
+# On the FIRST start (empty volume) migrations/*.sql run automatically, in
+# order. Later migrations must be applied by hand (docs/DEPLOY.md, "Upgrade").
+# Note: the image grants MYSQL_USER all privileges on MYSQL_DATABASE; the
+# gateway itself needs only SELECT, INSERT, UPDATE, DELETE.
+
+services:
+  mysql:
+    image: mysql:8.0
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set MYSQL_ROOT_PASSWORD in .env}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-sms_gateway}
+      MYSQL_USER: ${MYSQL_USER:-sms_gateway}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?set MYSQL_PASSWORD in .env}
+      TZ: UTC
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci"]
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$$MYSQL_ROOT_PASSWORD\" --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    security_opt:
+      - no-new-privileges:true
+
+  kurier:
+    environment:
+      MYSQL_HOST: mysql
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+volumes:
+  mysql-data:

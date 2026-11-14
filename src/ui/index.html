@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="ro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kurier</title>
+<link rel="stylesheet" href="/ui/assets/app.css">
+<script src="/ui/assets/app.js" defer></script>
+</head>
+<body>
+<header class="top">
+  <h1>Kurier <span id="version" class="muted"></span></h1>
+  <div class="top-right">
+    <span id="updated" class="muted" aria-live="polite"></span>
+    <button id="key-toggle" type="button" class="link">Cheie API</button>
+  </div>
+</header>
+
+<form id="key-form" class="key-form" hidden>
+  <label for="key-input">Cheia API (<code>SMS_API_KEY</code>) — rămâne doar în acest browser</label>
+  <div class="key-row">
+    <input id="key-input" type="password" autocomplete="off" spellcheck="false">
+    <button type="submit">Salvează</button>
+    <button type="button" id="key-clear" class="link">Șterge</button>
+  </div>
+  <p id="key-error" class="error" role="alert" hidden></p>
+</form>
+
+<nav class="tabs" role="tablist" aria-label="Secțiuni">
+  <button type="button" role="tab" id="tab-now" aria-controls="panel-now" aria-selected="true">Acum</button>
+  <button type="button" role="tab" id="tab-stats" aria-controls="panel-stats" aria-selected="false" tabindex="-1">Statistici</button>
+  <button type="button" role="tab" id="tab-search" aria-controls="panel-search" aria-selected="false" tabindex="-1">Căutare</button>
+</nav>
+
+<main>
+  <!-- ── Acum ─────────────────────────────────────────── -->
+  <div id="panel-now" role="tabpanel" aria-labelledby="tab-now">
+    <section class="path" aria-label="Drumul unui SMS">
+      <ol id="path" class="hops"></ol>
+      <p id="path-summary" class="path-summary">Se verifică routerul…</p>
+      <div class="test-sms">
+        <button type="button" id="test-btn" class="secondary">Trimite un SMS de test</button>
+        <button type="button" id="test-cancel" class="link" hidden>Renunță</button>
+        <span id="test-result" class="muted" aria-live="polite"></span>
+      </div>
+    </section>
+
+    <section class="budget" aria-labelledby="budget-h">
+      <h2 id="budget-h" class="section-h">Câte SMS-uri mai pot pleca acum</h2>
+      <div id="budget" class="meters"></div>
+      <p id="connections" class="connections"></p>
+    </section>
+
+    <section class="counts" aria-labelledby="counts-h">
+      <h2 id="counts-h" class="section-h">De la ultima pornire <span id="since" class="muted"></span></h2>
+      <dl id="counts"></dl>
+    </section>
+
+    <section id="outbox-section" class="outbox" hidden>
+      <h2>În coadă</h2>
+      <p class="muted">Routerul nu a acceptat încă aceste mesaje. Se reîncearcă automat.</p>
+      <ul id="outbox" class="plain"></ul>
+    </section>
+
+    <div class="threads">
+      <section aria-labelledby="sent-h">
+        <h2 id="sent-h">Trimise</h2>
+        <ol id="sent" class="thread sent"></ol>
+        <button type="button" class="link more" id="sent-more" hidden>Arată mai multe</button>
+      </section>
+      <section aria-labelledby="recv-h">
+        <h2 id="recv-h">Primite</h2>
+        <ol id="received" class="thread received"></ol>
+        <button type="button" class="link more" id="received-more" hidden>Arată mai multe</button>
+      </section>
+    </div>
+  </div>
+
+  <!-- ── Statistici ───────────────────────────────────── -->
+  <div id="panel-stats" role="tabpanel" aria-labelledby="tab-stats" hidden>
+    <div class="period" role="group" aria-label="Perioada">
+      <button type="button" data-days="7" aria-pressed="false">7 zile</button>
+      <button type="button" data-days="30" aria-pressed="true">30 de zile</button>
+      <button type="button" data-days="90" aria-pressed="false">90 de zile</button>
+    </div>
+    <p id="stats-summary" class="stats-summary"></p>
+    <figure class="chart-fig">
+      <figcaption class="chart-head">
+        <span class="chart-title">SMS-uri pe zi</span>
+        <span class="legend">
+          <span class="key"><i class="sw sw-sent"></i>trimise</span>
+          <span class="key"><i class="sw sw-bad"></i>blocate sau eșuate</span>
+        </span>
+      </figcaption>
+      <div id="chart" class="chart"></div>
+      <p id="chart-readout" class="readout" aria-live="polite"></p>
+    </figure>
+    <details class="table-view">
+      <summary>Vezi zilele ca tabel</summary>
+      <div class="table-wrap"><table id="days-table"></table></div>
+    </details>
+    <h2 class="types-h">Ce trimite cele mai multe SMS-uri</h2>
+    <div class="table-wrap"><table id="types-table"></table></div>
+  </div>
+
+  <!-- ── Căutare ──────────────────────────────────────── -->
+  <div id="panel-search" role="tabpanel" aria-labelledby="tab-search" hidden>
+    <form id="search-form" class="search-form">
+      <label class="grow">Text sau număr <input type="search" id="s-q" maxlength="100"></label>
+      <label>Rezultat
+        <select id="s-status">
+          <option value="">oricare</option>
+          <option value="sent">trimis</option>
+          <option value="blocked">blocat de limită</option>
+          <option value="duplicate">duplicat</option>
+          <option value="queued">pus în coadă</option>
+          <option value="failed">eșuat</option>
+        </select>
+      </label>
+      <label>Tip alertă <select id="s-type"><option value="">oricare</option></select></label>
+      <label>De la <input type="date" id="s-since"></label>
+      <label>Până la <input type="date" id="s-until"></label>
+      <label class="check"><input type="checkbox" id="s-critical"> doar critice</label>
+      <button type="submit">Caută</button>
+    </form>
+    <p id="search-note" class="muted" aria-live="polite"></p>
+    <ol id="results" class="thread sent results"></ol>
+    <button type="button" class="link more" id="results-more" hidden>Încarcă mai multe</button>
+  </div>
+</main>
+</body>
+</html>

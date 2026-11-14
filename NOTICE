@@ -1,0 +1,7 @@
+Kurier
+Copyright 2026 Stefan Maldaianu
+
+Licensed under the Apache License, Version 2.0. See the LICENSE file.
+
+No third-party code is vendored. Runtime dependencies are listed in
+requirements.txt and keep their own licenses.

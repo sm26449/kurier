@@ -1,0 +1,7 @@
+# Site-local overlay (copy to compose.local.yaml — gitignored — and append it
+# to COMPOSE_FILE). For host-specific wiring that doesn't belong in the repo,
+# e.g. a fixed container name other services already use:
+#
+# services:
+#   kurier:
+#     container_name: my-stack-kurier

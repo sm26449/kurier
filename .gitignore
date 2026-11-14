@@ -1,0 +1,11 @@
+.env
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+*.egg-info/
+
+# Site-local files
+compose.local.yaml
+CLAUDE.local.md
+secrets/

@@ -1,0 +1,10 @@
+# Direct dependencies, pinned. Transitive pins (pydantic, paho-mqtt) keep
+# rebuilds reproducible — pydantic drifted 2.13 → 2.14 between two builds.
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+httpx==0.28.1
+aiomqtt==2.3.0
+paho-mqtt==2.2.0
+pydantic==2.14.3
+pydantic-settings==2.7.1
+PyMySQL==1.2.4

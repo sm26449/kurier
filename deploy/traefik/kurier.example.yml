@@ -1,0 +1,29 @@
+# File-provider route for a Traefik that already runs (compose.proxy.yaml).
+# Copy into that Traefik's dynamic-config directory, set the hostname and
+# the cert resolver. Targets the alias `kurier` on PROXY_NETWORK.
+#
+# The API can send SMS: keep it off the internet. The pattern used in
+# production: a DNS-only record pointing at the host's LAN IP, a DNS-01
+# certificate, and the IP allowlist below as a second fence.
+http:
+  routers:
+    kurier:
+      rule: "Host(`kurier.example.com`)"
+      entryPoints: [websecure]
+      middlewares: [kurier-allowlist, kurier-hsts]
+      service: kurier
+      tls:
+        certResolver: letsencrypt
+  middlewares:
+    kurier-allowlist:
+      ipAllowList:
+        sourceRange: ["127.0.0.1/32", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16"]
+    kurier-hsts:
+      headers:
+        forceSTSHeader: true
+        stsSeconds: 31536000
+  services:
+    kurier:
+      loadBalancer:
+        servers:
+          - url: "http://kurier:5080"

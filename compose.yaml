@@ -1,0 +1,40 @@
+# Kurier (sms-gateway) — base service. Combine overlays with COMPOSE_FILE in .env:
+#
+#   COMPOSE_FILE=compose.yaml:compose.mysql.yaml                         standalone + bundled MySQL
+#   COMPOSE_FILE=compose.yaml:compose.mysql.yaml:compose.traefik.yaml    + own Traefik with TLS
+#   COMPOSE_FILE=compose.yaml:compose.proxy.yaml                         behind a Traefik that already runs
+#
+# Without MySQL (MYSQL_PASSWORD empty) everything works, but history, the
+# outbox and the inbound archive live in memory only. See docs/DEPLOY.md.
+
+name: kurier
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  kurier:
+    build: .
+    restart: always
+    env_file:
+      - .env
+    environment:
+      TZ: ${TZ:-UTC}
+    ports:
+      # Loopback by default. LAN clients that call the API directly
+      # (e.g. Node-RED on another host) need KURIER_BIND=0.0.0.0.
+      - "${KURIER_BIND:-127.0.0.1}:${KURIER_PORT:-5080}:5080"
+    healthcheck:
+      # Liveness only: /api/health always answers 200 while the process runs;
+      # the SMS path state is in its body (docs/API.md).
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:5080/api/health', timeout=8).raise_for_status()"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    security_opt:
+      - no-new-privileges:true
+    logging: *logging

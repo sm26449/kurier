@@ -1,0 +1,43 @@
+# Overlay: behind a Traefik that already runs on this host (another stack).
+#
+# Required in .env:
+#   PROXY_NETWORK=traefik              that Traefik's Docker network (external)
+#   KURIER_HOSTNAME=kurier.example.com
+# Optional:
+#   TRAEFIK_ENTRYPOINT (default websecure), TRAEFIK_CERTRESOLVER (default empty)
+#   ALLOWED_CIDRS (default: private ranges — the API can send SMS; keep it off the internet)
+#
+# The gateway joins PROXY_NETWORK under the alias `kurier`. Two ways for
+# that Traefik to route here:
+#   • Docker provider: the labels below are picked up automatically.
+#   • File provider:   copy deploy/traefik/kurier.example.yml into its
+#                      dynamic-config directory and set the hostname there;
+#                      the labels are then inert.
+# If MQTT/MySQL run on the same network, point MQTT_BROKER / MYSQL_HOST at
+# their container names — no extra wiring needed.
+
+services:
+  kurier:
+    networks:
+      default: {}
+      proxy:
+        aliases:
+          - kurier
+    labels:
+      traefik.enable: "true"
+      traefik.docker.network: ${PROXY_NETWORK:?set PROXY_NETWORK in .env}
+      traefik.http.routers.kurier.rule: Host(`${KURIER_HOSTNAME:?set KURIER_HOSTNAME in .env}`)
+      traefik.http.routers.kurier.entrypoints: ${TRAEFIK_ENTRYPOINT:-websecure}
+      traefik.http.routers.kurier.tls: "true"
+      traefik.http.routers.kurier.tls.certresolver: ${TRAEFIK_CERTRESOLVER:-}
+      traefik.http.routers.kurier.middlewares: kurier-allowlist,kurier-hsts
+      traefik.http.middlewares.kurier-allowlist.ipallowlist.sourcerange: >-
+        ${ALLOWED_CIDRS:-127.0.0.1/32,::1/128,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16}
+      traefik.http.middlewares.kurier-hsts.headers.stsSeconds: "31536000"
+      traefik.http.middlewares.kurier-hsts.headers.forceSTSHeader: "true"
+      traefik.http.services.kurier.loadbalancer.server.port: "5080"
+
+networks:
+  proxy:
+    name: ${PROXY_NETWORK:?set PROXY_NETWORK in .env}
+    external: true
