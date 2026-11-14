@@ -14,6 +14,10 @@ stricat.
 
 [English](README.md)
 
+![Pagina de stare Kurier: drumul SMS-ului, bugetul de trimitere, mesaje trimise și primite](docs/img/status-page.png)
+
+*Pagina de stare (date demonstrative). [Statistici în modul întunecat](docs/img/statistics-dark.png).*
+
 ## Ce face
 
 - **Trimite** — `POST /api/sms/send` sau MQTT `sms-gateway/send`. Numerele

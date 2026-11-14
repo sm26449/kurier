@@ -14,6 +14,10 @@ the SMS path itself is broken.
 
 [Română](README.ro.md)
 
+![Kurier status page: the SMS path hop by hop, sending budget, sent and received messages](docs/img/status-page.png)
+
+*The status page (demo data). [Statistics in dark mode](docs/img/statistics-dark.png).*
+
 ## What it does
 
 - **Send** — `POST /api/sms/send` or MQTT `sms-gateway/send`. Numbers
