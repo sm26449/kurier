@@ -20,7 +20,7 @@
 #
 # Steps: 1 preflight (health, version, outbox) · 2 backup (mysqldump of the
 # four tables, gzip-verified; skipped without MySQL) · 3 rollback tag ·
-# 4 build kurier:<label> · 5 recreate the kurier service (MySQL untouched) ·
+# 4 build kurier:<label> · 5 docker compose up (recreates what changed) ·
 # 6 verify (version, health, startup log).
 #
 # MySQL for the backup: KURIER_MYSQL_CONTAINER (env or .env — an external
@@ -69,8 +69,8 @@ say "Plan"
 echo "- backup MySQL tables to $DIR/backups/kurier-predeploy-$LABEL-$STAMP.sql.gz"
 [[ -n "$OLD_IMAGE" ]] && echo "- tag $OLD_IMAGE as kurier:rollback-pre-$LABEL"
 echo "- docker build -t $NEW_IMAGE $SRC"
-[[ -n "$RT" ]] && echo "- sync compose*.yaml + deploy/ + migrations/ into $DIR, set KURIER_IMAGE=$NEW_IMAGE in $DIR/.env (backups first)"
-echo "- docker compose up -d --no-build kurier, then verify"
+[[ -n "$RT" ]] && echo "- sync compose*.yaml + deploy/ + migrations/ + scripts/backup.sh into $DIR, set KURIER_IMAGE=$NEW_IMAGE in $DIR/.env (backups first)"
+echo "- docker compose up -d --no-build (kurier and any overlay services), then verify"
 (( DRY )) && { echo; echo "dry run: nothing changed"; exit 0; }
 if (( ! YES )); then read -r -p "Proceed? [y/N] " ok; [[ "$ok" == y* ]] || { echo aborted; exit 1; }; fi
 
@@ -104,9 +104,10 @@ docker build -q -t "$NEW_IMAGE" "$SRC" >/dev/null && echo "$NEW_IMAGE"
 if [[ -n "$RT" ]]; then
   say "Sync runtime files"
   SNAP="backups/runtime-pre-$LABEL-$STAMP"; mkdir -p "$SNAP"
-  cp -a .env "$SNAP/.env"; cp -a compose*.yaml deploy migrations "$SNAP/" 2>/dev/null || true
+  cp -a .env "$SNAP/.env"; cp -a compose*.yaml deploy migrations scripts "$SNAP/" 2>/dev/null || true
   cp -a "$SRC"/compose.yaml "$SRC"/compose.mysql.yaml "$SRC"/compose.proxy.yaml \
-        "$SRC"/compose.traefik.yaml "$SRC"/compose.local.example.yaml .
+        "$SRC"/compose.traefik.yaml "$SRC"/compose.backup.yaml "$SRC"/compose.local.example.yaml .
+  mkdir -p scripts && cp -a "$SRC/scripts/backup.sh" scripts/backup.sh
   rm -rf deploy migrations && cp -a "$SRC/deploy" deploy && cp -a "$SRC/migrations" migrations
   if grep -q '^KURIER_IMAGE=' .env; then
     sed -i "s|^KURIER_IMAGE=.*|KURIER_IMAGE=$NEW_IMAGE|" .env
@@ -118,7 +119,9 @@ fi
 
 say "5. Recreate"
 if [[ -z "$RT" ]]; then export KURIER_IMAGE="$NEW_IMAGE"; fi
-docker compose up -d --no-build kurier
+# All services of the selected overlays (e.g. backup); compose only recreates
+# what changed — a bundled MySQL is left alone unless its config changed.
+docker compose up -d --no-build
 
 say "6. Verify"
 for _ in $(seq 1 60); do curl -fsS -m 2 "$URL/" >/dev/null 2>&1 && break; sleep 1; done

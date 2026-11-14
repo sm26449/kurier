@@ -8,7 +8,9 @@ Authentication: header `X-API-Key` on `/api/sms/*` when `SMS_API_KEY` is set.
 
 Only `message` is required. Every other field is optional; **unknown fields
 are ignored**, so a producer can start sending a field before the gateway
-uses it. The same JSON is accepted on MQTT topic `sms-gateway/send`.
+uses it. The same JSON is accepted on MQTT topic `sms-gateway/send` — **without the
+API key**: whoever may publish there can send SMS, so restrict the topic with
+broker ACLs ([SECURITY.md](../SECURITY.md)).
 
 | Field | Type | Default | Meaning |
 |---|---|---|---|

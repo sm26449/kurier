@@ -17,7 +17,7 @@ Or without a local Python, in the image itself:
 
 ```bash
 docker build -t kurier-dev .
-docker run --rm -v "$PWD":/app -w /app kurier-dev \
+docker run --rm -u 0 -v "$PWD":/app -w /app kurier-dev \
   sh -c "pip install -q -r requirements-dev.txt && pytest -q"
 ```
 

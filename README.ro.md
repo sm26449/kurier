@@ -46,8 +46,8 @@ cp .env.example .env
 docker compose up -d --build
 ```
 
-Configurația implicită pornește Kurier cu un MySQL inclus; schema se creează
-la prima pornire. Apoi deschide **http://127.0.0.1:5080/ui** (îți cere cheia
+Configurația implicită pornește Kurier cu un MySQL inclus (schema se creează
+la prima pornire) și un backup zilnic în `./backups`. Apoi deschide **http://127.0.0.1:5080/ui** (îți cere cheia
 API o singură dată).
 
 Configurarea routerului (utilizator dedicat, permisiuni, particularități):

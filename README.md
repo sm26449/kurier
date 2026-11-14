@@ -56,8 +56,8 @@ cp .env.example .env
 docker compose up -d --build
 ```
 
-The default `COMPOSE_FILE` starts Kurier with a bundled MySQL; the schema
-is created on first start. Then:
+The default `COMPOSE_FILE` starts Kurier with a bundled MySQL (schema
+created on first start) and a daily backup into `./backups`. Then:
 
 ```bash
 curl http://127.0.0.1:5080/api/health
@@ -75,10 +75,10 @@ Router setup (a dedicated user, required permissions, known quirks):
 
 | Compose files | Use |
 |---|---|
-| `compose.yaml` + `compose.mysql.yaml` | standalone, bundled MySQL (default) |
+| `compose.yaml` + `compose.mysql.yaml` + `compose.backup.yaml` | standalone, bundled MySQL, daily backups (default) |
 | `+ compose.traefik.yaml` | adds its own Traefik with Let's Encrypt (HTTP-01 or DNS-01), IP allowlist |
 | `compose.yaml` + `compose.proxy.yaml` | behind a Traefik you already run (Docker or file provider) |
-| `compose.yaml` alone | external MySQL (`MYSQL_HOST`…) or none at all (in-memory) |
+| `compose.yaml` alone | external MySQL (`MYSQL_HOST`…) or none at all (in-memory); add `compose.backup.yaml` for backups |
 
 Details, TLS for LAN-only hostnames, upgrades and backups:
 [docs/DEPLOY.md](docs/DEPLOY.md).

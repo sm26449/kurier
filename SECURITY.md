@@ -42,7 +42,13 @@ phone numbers beyond what is needed to demonstrate the issue.
 - **Inbound SMS are untrusted input.** Sender ids can be spoofed. Consumers
   acting on commands must require `authorized: true`, and for anything that
   changes state, confirm with a one-time code sent back to the number.
+- **MQTT can send SMS too.** Anyone allowed to publish on
+  `sms-gateway/send` sends SMS without the API key. Restrict that topic with
+  broker ACLs to the clients that need it (or don't give the gateway MQTT
+  credentials that can subscribe to it, if you only use REST).
 - **The MySQL user needs only** `SELECT, INSERT, UPDATE, DELETE`.
+- The container runs as an unprivileged user (UID 10001) with
+  `no-new-privileges`.
 - Rate limits (`SMS_RATE_LIMIT_*`) cap the damage of a buggy or hostile
   client; keep them.
 

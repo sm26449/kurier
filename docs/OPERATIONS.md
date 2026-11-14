@@ -71,6 +71,13 @@ Daily (first run 5 min after start): `sms_log` older than
 `SMS_OUTBOX_RETENTION_DAYS` (30), expired idempotency keys, inbound
 archive older than `SMS_INBOX_RETENTION_DAYS` (90).
 
+## Backups
+
+`backups/last-backup.txt` says `ok <time> <file>` or `failed <time> <error>`
+after each daily run (`compose.backup.yaml`); `docker compose logs backup`
+has the history. A failed run usually means the backup service can't reach
+MySQL (network, password). Restore: [DEPLOY.md](DEPLOY.md#backup).
+
 ## Rotating secrets
 
 - `SMS_API_KEY`: change in `.env`, recreate (`docker compose up -d`), then

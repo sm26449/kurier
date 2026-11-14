@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements.txt -r requirements-dev.txt
+      - run: pytest -q
+
+  packaging:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compose overlays resolve
+        run: |
+          cp .env.example .env
+          cat >> .env <<'ENV'
+          MYSQL_PASSWORD=ci
+          MYSQL_ROOT_PASSWORD=ci
+          KURIER_HOSTNAME=kurier.example.com
+          ACME_EMAIL=ci@example.com
+          TLS_MODE=dns01
+          PROXY_NETWORK=traefik
+          ENV
+          for combo in \
+            compose.yaml \
+            compose.yaml:compose.mysql.yaml:compose.backup.yaml \
+            compose.yaml:compose.mysql.yaml:compose.backup.yaml:compose.traefik.yaml \
+            compose.yaml:compose.proxy.yaml; do
+            echo "$combo"; COMPOSE_FILE="$combo" docker compose config -q
+          done
+      - name: Shell scripts
+        run: shellcheck -S warning scripts/*.sh
+      - name: Image builds and runs unprivileged
+        run: |
+          docker build -t kurier:ci .
+          test "$(docker run --rm kurier:ci id -u)" = "10001"

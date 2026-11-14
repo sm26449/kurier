@@ -4,6 +4,24 @@ All notable changes to Kurier are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.12.0] — 2026-11-15
+
+### Added
+- `compose.backup.yaml`: daily dump of the four tables into `./backups`
+  (`BACKUP_TIME`, `BACKUP_KEEP_DAYS`), verified, with the last result in
+  `backups/last-backup.txt`. In the default `COMPOSE_FILE`.
+- CI (GitHub Actions): tests, compose overlays, shellcheck, image build.
+
+### Changed
+- The container runs as an unprivileged user (UID 10001).
+- `scripts/deploy.sh` starts every service of the selected overlays and
+  syncs `scripts/backup.sh` into a runtime directory.
+
+### Documentation
+- MQTT `sms-gateway/send` bypasses the API key — restrict it with broker
+  ACLs (SECURITY.md, API.md).
+- Long received SMS arrive as separate parts (TELTONIKA.md).
+
 ## [1.11.0] — 2026-11-15
 
 ### Added

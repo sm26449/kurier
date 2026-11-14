@@ -47,6 +47,15 @@ Set `TELTONIKA_MODEM` to the modem id (`1-1` on single-modem routers).
 | The send response reports billed parts (`data.sms_used`) | RutOS | recorded per SMS (`segments`) |
 | Diacritics / `—` switch an SMS to UCS-2 (70 chars per part) | GSM | GSM-7 transliteration before sending |
 
+## Known limitations
+
+- **Long received SMS are not reassembled.** A multipart (concatenated) SMS
+  appears in the modem inbox as separate parts; Kurier archives and
+  delivers each part as its own message. Short messages — commands,
+  replies, operator notices — are unaffected.
+- Sending long SMS is fine: the router splits them; the billed parts are
+  recorded (`segments`).
+
 ## Check from the Docker host
 
 ```bash

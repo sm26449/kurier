@@ -6,7 +6,8 @@ Choose files with `COMPOSE_FILE` in `.env` (colon-separated):
 
 | Files | What you get |
 |---|---|
-| `compose.yaml:compose.mysql.yaml` | Kurier + MySQL 8; schema created on first start. **Default.** |
+| `compose.yaml:compose.mysql.yaml` | Kurier + MySQL 8; schema created on first start |
+| `…:compose.backup.yaml` | + daily dump of the four tables into `./backups` (**default** with the line above) |
 | `…:compose.traefik.yaml` | + Traefik v3 (Let's Encrypt), IP allowlist, read-only Docker socket proxy |
 | `compose.yaml:compose.proxy.yaml` | joins a Traefik you already run (Docker or file provider) |
 | `compose.yaml` | Kurier only — external MySQL via `MYSQL_*`, or none (in-memory) |
@@ -121,9 +122,24 @@ are in MySQL; queued SMS resume.
 
 ## Backup
 
-Everything worth keeping is in the four tables (`sms_log`, `sms_outbox`,
-`sms_idempotency`, `sms_inbox`): include the database in your regular
-`mysqldump`. The `.env` holds the secrets — back it up separately.
+Everything worth keeping is in four tables (`sms_log`, `sms_outbox`,
+`sms_idempotency`, `sms_inbox`). `compose.backup.yaml` adds a `backup`
+service that dumps them daily at `BACKUP_TIME` (local `TZ`) into
+`./backups/kurier-<UTC>.sql.gz`, verifies each archive, keeps
+`BACKUP_KEEP_DAYS` (14) and writes the last result to
+`backups/last-backup.txt`. It uses the gateway's MySQL user and works with
+the bundled or an external MySQL (on another network: attach the service to
+it in `compose.local.yaml`). `BACKUP_ON_START=true` dumps once at start —
+handy to check the setup. `scripts/deploy.sh` also dumps before every deploy.
+
+Restore into an empty database:
+
+```bash
+gunzip -c backups/kurier-….sql.gz | mysql -u root -p sms_gateway
+```
+
+Copy `./backups` off the host with the rest of your backups. The `.env`
+holds the secrets — back it up separately.
 
 ## Other services calling Kurier
 
