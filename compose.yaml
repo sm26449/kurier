@@ -17,6 +17,10 @@ x-logging: &logging
 
 services:
   kurier:
+    # Built from the source checkout. A separate runtime directory (no source)
+    # runs a prebuilt image: scripts/deploy.sh builds kurier:<label> and sets
+    # KURIER_IMAGE in that directory's .env (docs/DEPLOY.md).
+    image: ${KURIER_IMAGE:-kurier:local}
     build: .
     restart: always
     env_file:

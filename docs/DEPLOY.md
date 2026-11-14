@@ -79,11 +79,37 @@ The gateway starts without the newest migration (it probes the schema
 and logs which file to apply), but some features stay in memory until
 it's applied.
 
+## Separate runtime directory (recommended for production)
+
+Keep the source checkout clean and run Kurier from its own directory —
+`.env`, `compose.local.yaml` and backups live there, the code doesn't:
+
+```bash
+mkdir -p /srv/kurier/backups
+cp .env.example /srv/kurier/.env && chmod 600 /srv/kurier/.env   # edit it
+scripts/deploy.sh 1.10.0 --runtime-dir=/srv/kurier --dry-run
+scripts/deploy.sh 1.10.0 --runtime-dir=/srv/kurier
+```
+
+[`scripts/deploy.sh`](../scripts/deploy.sh) does: preflight (health,
+version) → MySQL backup of the four tables (`KURIER_MYSQL_CONTAINER` for an
+external server, else the bundled `mysql`) → rollback tag
+`kurier:rollback-pre-<label>` → `docker build -t kurier:<label>` → sync
+`compose*.yaml`, `deploy/`, `migrations/` into the runtime directory and set
+`KURIER_IMAGE` (old files saved under `backups/`) → recreate the `kurier`
+service → verify version, health and the startup log. Without
+`--runtime-dir` it deploys in the checkout itself. It does not apply
+migrations.
+
+Rollback: `KURIER_IMAGE=kurier:rollback-pre-<label>` in `.env`, then
+`docker compose up -d --no-build kurier`.
+
 ## Upgrade
 
 ```bash
 git pull
 # apply any migrations/*.sql newer than your schema (CHANGELOG says which)
+# with a runtime directory: scripts/deploy.sh <version> --runtime-dir=… (does the rest)
 docker compose exec -T mysql sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE"' \
   < migrations/00X_….sql          # bundled MySQL
 docker compose up -d --build

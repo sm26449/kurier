@@ -29,6 +29,9 @@ Wire contracts are unchanged: API paths `/api/sms/*`, MQTT topics
   INTEGRATION_KLOPOT; SECURITY, CONTRIBUTING; `.env.example` covers every
   variable.
 - **License**: Apache-2.0.
+- **`scripts/deploy.sh`**: backup, rollback tag, build `kurier:<label>`,
+  recreate, verify — in the checkout or into a separate runtime directory
+  (`--runtime-dir`); compose takes `KURIER_IMAGE`.
 
 ## [1.9.2] — 2026-11-14
 
