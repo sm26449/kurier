@@ -41,7 +41,7 @@ def test_untrusted_text_is_never_rendered_as_html():
 
 
 def test_no_external_resources():
-    for f in ("index.html", "app.css", "app.js"):
+    for f in ("index.html", "app.css", "app.js", "i18n.js"):
         # The SVG namespace is an identifier, not a resource that gets loaded.
         text = (UI / f).read_text().replace("http://www.w3.org/2000/svg", "")
         assert "http://" not in text and "https://" not in text, f
@@ -50,3 +50,40 @@ def test_no_external_resources():
 def test_key_cleanup_handles_pasted_env_lines():
     js = (UI / "app.js").read_text()
     assert "function cleanKey" in js and "setKey(cleanKey(" in js
+
+
+# ── Translations ──────────────────────────────────────────────
+
+def _lang_keys(lang: str) -> set[str]:
+    src = (UI / "i18n.js").read_text()
+    start = src.index(f"  {lang}: {{")
+    end = src.index("\n  },", start)
+    return set(re.findall(r'^\s{4}"([\w.]+)":', src[start:end], re.M))
+
+
+def test_both_languages_have_the_same_keys():
+    en, ro = _lang_keys("en"), _lang_keys("ro")
+    assert len(en) > 100
+    assert en - ro == set(), f"missing in ro: {sorted(en - ro)}"
+    assert ro - en == set(), f"missing in en: {sorted(ro - en)}"
+
+
+def test_every_used_key_exists():
+    keys = _lang_keys("en")
+    js = (UI / "app.js").read_text()
+    used = set(re.findall(r'\bt\("([\w.]+)"', js))
+    for idle, armed in re.findall(r'confirmable\([^,]+, "([\w.]+)", "([\w.]+)"', js):
+        used.update((idle, armed))
+    html = (UI / "index.html").read_text()
+    used |= set(re.findall(r'data-i18n(?:-aria)?="([\w.]+)"', html))
+    assert used and used - keys == set(), f"unknown keys: {sorted(used - keys)}"
+
+
+def test_i18n_script_is_served_and_safe():
+    c = client()
+    assert c.get("/ui/assets/i18n.js").status_code == 200
+    js = (UI / "i18n.js").read_text()
+    for sink in ("innerHTML", "outerHTML", "insertAdjacentHTML", "document.write"):
+        assert sink not in js
+    html = (UI / "index.html").read_text()
+    assert html.index("i18n.js") < html.index("app.js")  # t() defined before use

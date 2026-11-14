@@ -4,6 +4,20 @@ All notable changes to Kurier (formerly sms-gateway) are recorded here. Format f
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the
 project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.11.0] — 2026-11-15
+
+### feat(ui): status page in English and Romanian
+
+- All text moved to `src/ui/i18n.js` (English + Romanian, same keys —
+  `tests/test_ui.py` checks parity and that every key used exists).
+- Language follows the browser (`ro*` → Romanian, otherwise English); a
+  switch at the top right changes it in place and is remembered.
+- Dates and numbers follow the language (`17 Oct` / `17 oct.`,
+  `1,234` / `1.234`); plurals per language, including Romanian "de"
+  (`7 zile`, `30 de zile`, `493 de SMS-uri`) — the previous Romanian copy
+  said "30 zile".
+- The test SMS text follows the page language.
+
 ## [1.10.0] — 2026-11-15
 
 ### Kurier: new name, self-contained deployment, public documentation

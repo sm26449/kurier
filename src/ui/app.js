@@ -8,7 +8,17 @@ const PAGE = 10;
 const KEY_STORE = "smsgw.apiKey";
 const shown = { sent: PAGE, received: PAGE };
 const opened = new Set();  // bubbles the user expanded survive refreshes
-const nf = new Intl.NumberFormat("ro-RO");
+
+// Locale-dependent formatters (i18n.js: LANG, locale(), t()); rebuilt on a language switch.
+let nf, rtf, dtf, dayFmt, dayLong;
+function setupFormatters() {
+  const loc = locale();
+  nf = new Intl.NumberFormat(loc);
+  rtf = new Intl.RelativeTimeFormat(LANG, { numeric: "auto", style: "short" });
+  dtf = new Intl.DateTimeFormat(loc, { dateStyle: "medium", timeStyle: "medium" });
+  dayFmt = new Intl.DateTimeFormat(loc, { day: "numeric", month: "short" });
+  dayLong = new Intl.DateTimeFormat(loc, { weekday: "long", day: "numeric", month: "long" });
+}
 
 // ── DOM helpers ──────────────────────────────────────────────
 function el(tag, props, ...children) {
@@ -79,24 +89,20 @@ async function api(path, { method = "GET", body } = {}) {
 }
 
 // ── Formatting ───────────────────────────────────────────────
-const rtf = new Intl.RelativeTimeFormat("ro", { numeric: "auto", style: "short" });
-const dtf = new Intl.DateTimeFormat("ro-RO", { dateStyle: "medium", timeStyle: "medium" });
-const dayFmt = new Intl.DateTimeFormat("ro-RO", { day: "numeric", month: "short" });
-const dayLong = new Intl.DateTimeFormat("ro-RO", { weekday: "long", day: "numeric", month: "long" });
 
 function ago(iso) {
   if (!iso) return "";
   const s = Math.round((Date.parse(iso) - Date.now()) / 1000);
   const a = Math.abs(s);
-  if (a < 45) return "acum";
+  if (a < 45) return t("ago.now");
   if (a < 3600) return rtf.format(Math.round(s / 60), "minute");
   if (a < 86400) return rtf.format(Math.round(s / 3600), "hour");
   return rtf.format(Math.round(s / 86400), "day");
 }
 function abs(iso) { return iso ? dtf.format(new Date(iso)) : ""; }
 function timeEl(iso) { return el("time", { datetime: iso, title: abs(iso), text: ago(iso) }); }
-function minutes(n) { return n < 1 ? "sub un minut" : n === 1 ? "1 minut" : `${n} minute`; }
-function attempts(n) { return n === 1 ? "1 încercare" : `${n} încercări`; }
+function minutes(n) { return t("minutes", { n }); }
+function attempts(n) { return t("attempts", { n }); }
 function duration(sec) {
   if (sec < 60) return `${sec} s`;
   const m = Math.ceil(sec / 60);
@@ -122,12 +128,13 @@ function bars(level) {
 
 // Two-step confirm on one button: the first click arms it (label changes),
 // the second performs the action; it disarms itself after a few seconds.
-function confirmable(button, armedLabel, action, { cancel } = {}) {
-  const idle = button.textContent;
+// Labels are i18n keys, resolved when shown (the language can change).
+function confirmable(button, idleKey, armedKey, action, { cancel } = {}) {
   let timer = null;
+  button.textContent = t(idleKey);
   const disarm = () => {
     clearTimeout(timer);
-    button.textContent = idle;
+    button.textContent = t(idleKey);
     button.classList.remove("confirm");
     button.dataset.armed = "";
     if (cancel) cancel.hidden = true;
@@ -135,7 +142,7 @@ function confirmable(button, armedLabel, action, { cancel } = {}) {
   button.addEventListener("click", async () => {
     if (button.dataset.armed !== "1") {
       button.dataset.armed = "1";
-      button.textContent = armedLabel;
+      button.textContent = t(armedKey);
       button.classList.add("confirm");
       if (cancel) cancel.hidden = false;
       timer = setTimeout(disarm, 8000);
@@ -153,22 +160,22 @@ function renderPath(h, st, m, apiOk) {
   const sig = { rsrp: m.rsrp, rssi: m.rssi ?? st.signal_strength };
   const lvl = signalLevel(sig);
   const signalText = typeof sig.rsrp === "number" ? `RSRP ${sig.rsrp} dBm`
-    : typeof sig.rssi === "number" ? `RSSI ${sig.rssi} dBm` : "semnal necunoscut";
+    : typeof sig.rssi === "number" ? `RSSI ${sig.rssi} dBm` : t("signal.unknown");
   const net = [st.operator, st.band || st.connection_type].filter(Boolean).join(" ");
   const temp = typeof st.modem_temperature === "number" ? `${Math.round(st.modem_temperature)} °C` : "";
   const waitMin = Math.round((h.outbox_oldest_age_seconds || 0) / 60);
 
   const hops = [
-    { name: "Gateway", state: apiOk ? "ok" : "warn",
-      detail: apiOk ? `pornit ${ago(new Date(Date.now() - (h.uptime_seconds || 0) * 1000).toISOString())}` : "fără cheie API" },
-    { name: "Router", state: h.modem_reachable ? "ok" : "bad",
-      detail: h.modem_reachable ? [st.modem_model || "răspunde", temp].filter(Boolean).join(", ") : "nu răspunde" },
-    { name: "SIM", state: !h.modem_reachable ? "bad" : h.sim_ok ? "ok" : "bad",
-      detail: h.sim_ok ? (st.sim_state || "OK") : "nu e gata" },
-    { name: "Rețea", state: !h.modem_reachable ? "bad" : lvl === null ? "warn" : lvl >= 2 ? "ok" : lvl === 1 ? "warn" : "bad",
+    { name: t("hop.gateway"), state: apiOk ? "ok" : "warn",
+      detail: apiOk ? t("hop.started", { ago: ago(new Date(Date.now() - (h.uptime_seconds || 0) * 1000).toISOString()) }) : t("hop.noKey") },
+    { name: t("hop.router"), state: h.modem_reachable ? "ok" : "bad",
+      detail: h.modem_reachable ? [st.modem_model || t("hop.answers"), temp].filter(Boolean).join(", ") : t("hop.down") },
+    { name: t("hop.sim"), state: !h.modem_reachable ? "bad" : h.sim_ok ? "ok" : "bad",
+      detail: h.sim_ok ? (st.sim_state || "OK") : t("hop.simNotReady") },
+    { name: t("hop.network"), state: !h.modem_reachable ? "bad" : lvl === null ? "warn" : lvl >= 2 ? "ok" : lvl === 1 ? "warn" : "bad",
       detail: lvl === null ? (net || "—") : [bars(lvl), net || signalText], title: signalText },
-    { name: "Coadă", state: h.outbox_pending ? (waitMin >= 10 ? "bad" : "warn") : "ok",
-      detail: h.outbox_pending ? `${h.outbox_pending} în așteptare, cel mai vechi de ${minutes(waitMin)}` : "goală" },
+    { name: t("hop.queue"), state: h.outbox_pending ? (waitMin >= 10 ? "bad" : "warn") : "ok",
+      detail: h.outbox_pending ? t("hop.queueWaiting", { n: h.outbox_pending, age: minutes(waitMin) }) : t("hop.queueEmpty") },
   ];
   $("path").replaceChildren(...hops.map((x) => el("li", { class: "hop", "data-state": x.state, title: x.title },
     el("div", { class: "node" }),
@@ -179,19 +186,19 @@ function renderPath(h, st, m, apiOk) {
   const summary = $("path-summary");
   let text, cls;
   if (!h.modem_reachable) {
-    text = "Routerul nu răspunde. SMS-urile noi intră în coadă și pleacă automat când revine.";
+    text = t("summary.routerDown");
     cls = "bad";
   } else if (!h.sim_ok) {
-    text = "Routerul răspunde, dar SIM-ul nu e gata. Verifică cartela și semnalul.";
+    text = t("summary.simNotReady");
     cls = "bad";
   } else if (h.outbox_pending && waitMin >= 10) {
-    text = `Mesajele nu pleacă: ${h.outbox_pending} așteaptă de ${minutes(waitMin)}. Vezi motivul în lista de mai jos.`;
+    text = t("summary.stuck", { n: h.outbox_pending, age: minutes(waitMin) });
     cls = "bad";
   } else if (h.outbox_pending) {
-    text = `${h.outbox_pending} mesaj(e) în curs de reîncercare.`;
+    text = t("summary.retrying", { n: h.outbox_pending });
     cls = "warn";
   } else {
-    text = "SMS-urile pleacă și se primesc normal.";
+    text = t("summary.ok");
     cls = "ok";
   }
   summary.textContent = text;
@@ -201,23 +208,23 @@ function renderPath(h, st, m, apiOk) {
 // ── Budget + connections ─────────────────────────────────────
 function renderBudget(b) {
   const meters = [
-    ["Normale, pe minut", b.normal_minute],
-    ["Normale, pe oră", b.normal_hour],
-    ["Critice, pe oră", b.critical_hour],
+    [t("budget.normalMinute"), b.normal_minute],
+    [t("budget.normalHour"), b.normal_hour],
+    [t("budget.criticalHour"), b.critical_hour],
   ];
   $("budget").replaceChildren(...meters.map(([label, w]) => {
     const left = Math.max(0, w.limit - w.used);
     const ratio = w.limit ? w.used / w.limit : 0;
     const cls = left === 0 ? "full" : ratio >= 0.7 ? "high" : "";
     const note = left === 0
-      ? `Plin: se eliberează un loc în ${duration(w.frees_in_seconds)}`
-      : w.used ? `cel mai vechi iese din fereastră în ${duration(w.oldest_leaves_in_seconds)}`
-      : "nicio trimitere în fereastră";
+      ? t("budget.full", { d: duration(w.frees_in_seconds) })
+      : w.used ? t("budget.oldest", { d: duration(w.oldest_leaves_in_seconds) })
+      : t("budget.none");
     return el("div", { class: "meter" },
       el("div", { class: "meter-label" }, el("span", { text: label }),
-        el("strong", { text: `${left} din ${w.limit} libere` })),
+        el("strong", { text: t("budget.free", { left, limit: w.limit }) })),
       el("progress", { max: String(w.limit), value: String(Math.min(w.used, w.limit)), class: cls,
-                       "aria-label": `${label}: ${w.used} folosite din ${w.limit}` }),
+                       "aria-label": t("budget.aria", { label, used: w.used, limit: w.limit }) }),
       el("div", { class: `meter-note${left === 0 ? " full" : ""}`, text: note }));
   }));
 
@@ -225,13 +232,13 @@ function renderBudget(b) {
   const mqtt = c.mqtt || {}, hook = c.webhook || {};
   $("connections").replaceChildren(
     el("span", {}, el("i", { class: `dot ${mqtt.connected ? "ok" : "bad"}` }),
-      mqtt.connected ? "MQTT conectat" : `MQTT deconectat (${mqtt.broker || "broker"})`),
+      mqtt.connected ? t("conn.mqttOn") : t("conn.mqttOff", { broker: mqtt.broker || "broker" })),
     el("span", {}, el("i", { class: `dot ${hook.enabled ? (hook.failures ? "bad" : "ok") : ""}` }),
       hook.enabled
-        ? `Webhook Klopot activ: ${nf.format(hook.forwarded)} livrate, ${nf.format(hook.failures)} eșecuri`
-        : "Webhook Klopot oprit"),
-    el("span", { text: `Duplicatele se opresc ${Math.round(b.dedup_seconds / 60)} min (${b.dedup_active} active acum)` }),
-    el("span", { text: `Istoric: ${c.history_store === "MySQL" ? "MySQL" : "doar în memorie"}` }),
+        ? t("conn.hookOn", { ok: nf.format(hook.forwarded), fail: nf.format(hook.failures) })
+        : t("conn.hookOff")),
+    el("span", { text: t("conn.dedup", { min: Math.round(b.dedup_seconds / 60), n: b.dedup_active }) }),
+    el("span", { text: t("conn.history", { store: c.history_store === "MySQL" ? "MySQL" : t("conn.memory") }) }),
   );
 }
 
@@ -241,14 +248,14 @@ function renderCounts(m) {
     $("since").textContent = ago(new Date(Date.now() - m.uptime_seconds * 1000).toISOString());
   }
   const items = [
-    ["Trimise", m.sent],
-    ["Segmente plătite", m.segments_sent],
-    ["Puse în coadă", m.queued],
-    ["Livrate din coadă", m.outbox_delivered],
-    ["Blocate de limită", m.blocked_rate_limit, m.blocked_rate_limit > 0],
-    ["Duplicate oprite", m.blocked_duplicate],
-    ["Eșuate", m.failed, m.failed > 0],
-    ["Primite", m.inbox_received],
+    [t("count.sent"), m.sent],
+    [t("count.segments"), m.segments_sent],
+    [t("count.queued"), m.queued],
+    [t("count.delivered"), m.outbox_delivered],
+    [t("count.blocked"), m.blocked_rate_limit, m.blocked_rate_limit > 0],
+    [t("count.dup"), m.blocked_duplicate],
+    [t("count.failed"), m.failed, m.failed > 0],
+    [t("count.received"), m.inbox_received],
   ];
   $("counts").replaceChildren(...items.map(([label, value, alert]) =>
     el("div", {}, el("dt", { text: label }),
@@ -259,21 +266,21 @@ function renderCounts(m) {
 function renderOutbox(items) {
   $("outbox-section").hidden = !items.length;
   $("outbox").replaceChildren(...items.map((i) => {
-    const cancel = el("button", { type: "button", class: "link cancel", text: "Anulează" });
-    confirmable(cancel, "Confirmă anularea", async () => {
+    const cancel = el("button", { type: "button", class: "link cancel" });
+    confirmable(cancel, "outbox.cancel", "outbox.confirm", async () => {
       try {
         await api(`/api/sms/outbox/${i.id}`, { method: "DELETE" });
         refresh();
       } catch (e) {
-        cancel.textContent = `Nu s-a anulat: ${e.message}`;
+        cancel.textContent = t("outbox.cancelFailed", { msg: e.message });
       }
     });
     return el("li", {},
       el("strong", { text: i.number }), " — ", i.message.slice(0, 80), cancel,
       el("div", { class: "meta" },
-        el("span", {}, "pus în coadă ", timeEl(i.created_at)),
+        el("span", {}, `${t("outbox.queuedAt")} `, timeEl(i.created_at)),
         el("span", { text: attempts(i.attempts) }),
-        i.last_error ? el("span", { text: `ultima eroare: ${i.last_error}` }) : null));
+        i.last_error ? el("span", { text: t("outbox.lastError", { e: i.last_error }) }) : null));
   }));
 }
 
@@ -316,14 +323,14 @@ function paginate(listId, groups, render) {
 
 function sentStatus(e) {
   const d = e.detail || "";
-  if (e.success) return { label: "trimis", cls: "" };
+  if (e.success) return { label: t("st.sent"), cls: "" };
   if (e.queued || d.startsWith("queued")) {
-    return { label: e.outbox_id ? `în coadă #${e.outbox_id}` : "pus în coadă", cls: "pending", tag: "warn" };
+    return { label: e.outbox_id ? t("st.queuedN", { id: e.outbox_id }) : t("st.queued"), cls: "pending", tag: "warn" };
   }
-  if (d.startsWith("Rate limit")) return { label: "blocat de limită", cls: "problem", tag: "bad" };
-  if (d.startsWith("Duplicate")) return { label: "duplicat, nu s-a trimis", cls: "dim" };
-  if (d.startsWith("expired")) return { label: "expirat în coadă", cls: "problem", tag: "bad" };
-  return { label: "eșuat", cls: "problem", tag: "bad" };
+  if (d.startsWith("Rate limit")) return { label: t("st.blocked"), cls: "problem", tag: "bad" };
+  if (d.startsWith("Duplicate")) return { label: t("st.dup"), cls: "dim" };
+  if (d.startsWith("expired")) return { label: t("st.expired"), cls: "problem", tag: "bad" };
+  return { label: t("st.failed"), cls: "problem", tag: "bad" };
 }
 
 function sentItem(g, absolute = false) {
@@ -333,17 +340,17 @@ function sentItem(g, absolute = false) {
     bubble(e.message, `s:${e.timestamp}`),
     el("div", { class: "meta" },
       g.count > 1 ? el("span", { class: "count", text: `×${g.count}` }) : null,
-      e.priority === "critical" ? el("span", { class: "tag crit", text: "critic" }) : null,
+      e.priority === "critical" ? el("span", { class: "tag crit", text: t("tag.critical") }) : null,
       el("span", { class: s.tag ? `tag ${s.tag}` : "", text: s.label, title: e.detail || "" }),
       e.source ? el("span", { text: e.type ? `${e.source} / ${e.type}` : e.source }) : null,
-      e.segments ? el("span", { text: `${e.segments} segm.` }) : null,
+      e.segments ? el("span", { text: t("segments.short", { n: e.segments }) }) : null,
       el("span", { text: e.number }),
       absolute ? el("time", { datetime: e.timestamp, text: abs(e.timestamp) }) : when(g, "timestamp")));
 }
 
 function renderSent(items) {
   if (!items.length) {
-    $("sent").replaceChildren(el("li", { class: "empty", text: "Niciun SMS trimis încă." }));
+    $("sent").replaceChildren(el("li", { class: "empty", text: t("empty.sent") }));
     $("sent-more").hidden = true;
     return;
   }
@@ -353,7 +360,7 @@ function renderSent(items) {
 
 function renderReceived(items) {
   if (!items.length) {
-    $("received").replaceChildren(el("li", { class: "empty", text: "Niciun SMS primit." }));
+    $("received").replaceChildren(el("li", { class: "empty", text: t("empty.received") }));
     $("received-more").hidden = true;
     return;
   }
@@ -365,9 +372,9 @@ function renderReceived(items) {
       el("div", { class: "meta" },
         g.count > 1 ? el("span", { class: "count", text: `×${g.count}` }) : null,
         el("span", { text: m.sender }),
-        m.authorized ? null : el("span", { class: "tag", text: "expeditor necunoscut" }),
-        m.stale ? el("span", { class: "tag warn", text: "prea vechi, nelivrat" })
-          : el("span", { text: delivered ? `livrat: ${delivered}` : "nelivrat încă" }),
+        m.authorized ? null : el("span", { class: "tag", text: t("recv.unknown") }),
+        m.stale ? el("span", { class: "tag warn", text: t("recv.stale") })
+          : el("span", { text: delivered ? t("recv.delivered", { to: delivered }) : t("recv.notYet") }),
         m.forward_error ? el("span", { class: "tag bad", text: `webhook: ${m.forward_error}` }) : null,
         when(g, "date")));
   });
@@ -376,23 +383,23 @@ function renderReceived(items) {
 // ── Test SMS ─────────────────────────────────────────────────
 function setupTestSms() {
   const out = $("test-result");
-  confirmable($("test-btn"), "Confirmă: trimite 1 SMS la numărul implicit", async () => {
-    out.textContent = "Se trimite…";
+  confirmable($("test-btn"), "test.button", "test.armed", async () => {
+    out.textContent = t("test.sending");
     try {
-      const time = new Date().toLocaleTimeString("ro-RO");
+      const time = new Date().toLocaleTimeString(locale());
       const res = await api("/api/sms/send", { method: "POST", body: {
-        message: `Test din pagina de status Kurier, ${time}.`,
+        message: t("test.message", { time }),
         source: "ui", type: "ui_test", idempotency_key: `ui-${randomKey()}`,
       } });
       const r = res[0] || {};
-      out.textContent = r.queued ? "Pus în coadă: routerul nu răspunde, pleacă automat când revine."
-        : r.success ? `Trimis${r.segments ? ` (${r.segments} segment${r.segments > 1 ? "e" : ""})` : ""}. Verifică telefonul.`
-        : `Nu s-a trimis: ${r.detail || "motiv necunoscut"}`;
+      out.textContent = r.queued ? t("test.queued")
+        : r.success ? t("test.sent", { n: r.segments })
+        : t("test.notSent", { why: r.detail || t("test.unknownReason") });
       refresh();
     } catch (e) {
-      out.textContent = e.status === 429 ? `Nu s-a trimis: ${e.message}. Încearcă mai târziu.`
-        : e.status === 409 ? "Nu s-a trimis: un test identic a plecat în ultimele minute."
-        : `Nu s-a trimis: ${e.message}`;
+      out.textContent = e.status === 429 ? t("test.rate", { msg: e.message })
+        : e.status === 409 ? t("test.dup")
+        : t("test.notSent", { why: e.message });
     }
   }, { cancel: $("test-cancel") });
 }
@@ -412,12 +419,12 @@ function niceMax(v) {
 function readout(i) {
   const d = statsData.per_day[i];
   if (!d) { $("chart-readout").textContent = ""; return; }
-  const parts = [`${nf.format(d.sent)} trimise`];
-  if (d.segments) parts.push(`${nf.format(d.segments)} segmente`);
-  if (d.blocked) parts.push(`${nf.format(d.blocked)} blocate de limită`);
-  if (d.failed) parts.push(`${nf.format(d.failed)} eșuate`);
-  if (d.duplicate) parts.push(`${nf.format(d.duplicate)} duplicate oprite`);
-  if (d.queued) parts.push(`${nf.format(d.queued)} puse în coadă`);
+  const parts = [t("rd.sent", { n: nf.format(d.sent) })];
+  if (d.segments) parts.push(t("rd.segments", { n: nf.format(d.segments) }));
+  if (d.blocked) parts.push(t("rd.blocked", { n: nf.format(d.blocked) }));
+  if (d.failed) parts.push(t("rd.failed", { n: nf.format(d.failed) }));
+  if (d.duplicate) parts.push(t("rd.dup", { n: nf.format(d.duplicate) }));
+  if (d.queued) parts.push(t("rd.queued", { n: nf.format(d.queued) }));
   $("chart-readout").textContent = `${dayLong.format(localDay(d.date))}: ${parts.join(", ")}.`;
 }
 
@@ -444,9 +451,9 @@ function renderChart() {
   const axis = svg("g", { class: "axis" });
   for (const v of [0, max / 2, max]) {
     grid.append(svg("line", { x1: m.l, x2: W - m.r, y1: y(v), y2: y(v) }));
-    const t = svg("text", { x: m.l - 6, y: y(v) + 4, "text-anchor": "end" });
-    t.textContent = nf.format(v);
-    axis.append(t);
+    const tick = svg("text", { x: m.l - 6, y: y(v) + 4, "text-anchor": "end" });
+    tick.textContent = nf.format(v);
+    axis.append(tick);
   }
   const step = days.length <= 7 ? 1 : days.length <= 31 ? 7 : 14;
   const cols = svg("g", {});
@@ -471,14 +478,14 @@ function renderChart() {
     const last = i === days.length - 1;
     // Skip a periodic label that would collide with the last one.
     if (last || (i % step === 0 && days.length - 1 - i >= Math.ceil(step / 2))) {
-      const t = svg("text", { x: cx, y: H - 6, "text-anchor": last ? "end" : "middle" });
-      t.textContent = dayFmt.format(localDay(d.date));
-      axis.append(t);
+      const label = svg("text", { x: cx, y: H - 6, "text-anchor": last ? "end" : "middle" });
+      label.textContent = dayFmt.format(localDay(d.date));
+      axis.append(label);
     }
   });
   const chart = svg("svg", {
     viewBox: `0 0 ${W} ${H}`, role: "img", tabindex: "0",
-    "aria-label": `SMS-uri pe zi, ultimele ${days.length} zile. Săgețile stânga și dreapta arată fiecare zi; tabelul de dedesubt are aceleași date.`,
+    "aria-label": t("chart.aria", { n: days.length }),
   }, grid, cols, axis);
   chart.addEventListener("keydown", (ev) => {
     if (ev.key === "ArrowLeft") { setActive(activeDay - 1); ev.preventDefault(); }
@@ -489,50 +496,48 @@ function renderChart() {
 }
 
 function renderStats() {
-  const s = statsData, t = s.totals;
-  const parts = [`${nf.format(t.sent)} SMS-uri trimise`];
-  if (t.segments) parts.push(`${nf.format(t.segments)} segmente plătite`);
-  parts.push(`${nf.format(t.blocked)} blocate de limită`, `${nf.format(t.failed)} eșuate`,
-             `${nf.format(t.duplicate)} duplicate oprite`);
-  let text = `În ultimele ${s.days} zile: ${parts.join(", ")}.`;
-  if (s.unknown_segments) {
-    text += ` Segmentele se înregistrează din v1.6.0; ${nf.format(s.unknown_segments)} SMS-uri mai vechi nu le au.`;
-  }
-  if (s.partial) text += " Doar ultimele 100 de înregistrări (istoricul MySQL nu e disponibil).";
+  const s = statsData, tot = s.totals;
+  const parts = [t("ss.sent", { n: nf.format(tot.sent) })];
+  if (tot.segments) parts.push(t("ss.segments", { n: nf.format(tot.segments) }));
+  parts.push(t("ss.blocked", { n: nf.format(tot.blocked) }), t("ss.failed", { n: nf.format(tot.failed) }),
+             t("ss.dup", { n: nf.format(tot.duplicate) }));
+  let text = t("ss.lead", { days: s.days, parts: parts.join(", ") });
+  if (s.unknown_segments) text += ` ${t("ss.unknown", { n: nf.format(s.unknown_segments) })}`;
+  if (s.partial) text += ` ${t("ss.partial")}`;
   $("stats-summary").textContent = text;
   renderChart();
 
   const head = (cols) => el("thead", {}, el("tr", {}, ...cols.map((h) => el("th", { scope: "col", text: h }))));
   $("days-table").replaceChildren(
-    head(["Zi", "Trimise", "Segmente", "Blocate", "Eșuate", "Duplicate", "În coadă"]),
+    head(["th.day", "th.sent", "th.segments", "th.blocked", "th.failed", "th.dup", "th.queued"].map((k) => t(k))),
     el("tbody", {}, ...s.per_day.slice().reverse().map((d) => el("tr", {},
       el("td", { text: dayFmt.format(localDay(d.date)) }),
       ...[d.sent, d.segments, d.blocked, d.failed, d.duplicate, d.queued].map((v) => el("td", { text: nf.format(v) }))))));
 
   const types = s.types.filter((x) => x.sent + x.blocked + x.failed > 0).slice(0, 12);
   $("types-table").replaceChildren(
-    head(["Tip alertă", "Trimise", "Segmente", "Blocate", "Eșuate"]),
+    head(["th.type", "th.sent", "th.segments", "th.blocked", "th.failed"].map((k) => t(k))),
     el("tbody", {}, ...(types.length ? types.map((x) => el("tr", {},
-      el("td", { text: x.type || "fără tip (înainte de v1.6)" }),
+      el("td", { text: x.type || t("types.none") }),
       ...[x.sent, x.segments, x.blocked, x.failed].map((v) => el("td", { text: nf.format(v) }))))
-      : [el("tr", {}, el("td", { colspan: "5", text: "Niciun SMS în perioada aleasă." }))])));
+      : [el("tr", {}, el("td", { colspan: "5", text: t("types.empty") }))])));
 
   const select = $("s-type");
   const current = select.value;
-  select.replaceChildren(el("option", { value: "", text: "oricare" }),
+  select.replaceChildren(el("option", { value: "", text: t("search.any") }),
     ...s.types.filter((x) => x.type).map((x) => el("option", { value: x.type, text: x.type })));
   select.value = current;
 }
 
 async function loadStats() {
-  $("stats-summary").textContent = "Se încarcă…";
+  $("stats-summary").textContent = t("loading");
   try {
     statsData = await api(`/api/sms/stats?days=${statsDays}`);
     renderStats();
   } catch (e) {
     $("stats-summary").textContent = e instanceof AuthError
-      ? "Introdu cheia API (sus, dreapta) ca să vezi statisticile."
-      : `Statisticile nu s-au putut încărca: ${e.message}`;
+      ? t("stats.needKey")
+      : t("stats.failed", { msg: e.message });
   }
 }
 
@@ -560,7 +565,7 @@ function searchParams() {
 
 async function runSearch(append) {
   if (!append) searchOffset = 0;
-  $("search-note").textContent = "Se caută…";
+  $("search-note").textContent = t("search.searching");
   try {
     const rows = await api(`/api/sms/history/search?${searchParams()}`);
     const more = rows.length > SEARCH_PAGE;
@@ -570,12 +575,12 @@ async function runSearch(append) {
     searchOffset += Math.min(rows.length, SEARCH_PAGE);
     $("results-more").hidden = !more;
     $("search-note").textContent = searchOffset === 0
-      ? "Niciun SMS nu corespunde filtrelor."
-      : `${nf.format(searchOffset)}${more ? "+" : ""} rezultate, cele mai noi primele.`;
+      ? t("search.none")
+      : t("search.count", { n: nf.format(searchOffset), more });
   } catch (e) {
     $("search-note").textContent = e instanceof AuthError
-      ? "Introdu cheia API (sus, dreapta) ca să cauți."
-      : `Căutarea nu a mers: ${e.message}`;
+      ? t("search.needKey")
+      : t("search.failed", { msg: e.message });
   }
 }
 
@@ -598,7 +603,7 @@ function showTab(name, focus) {
   if (name === "stats" && statsData) renderChart();
 }
 
-// ── Refresh loop (tab "Acum") ────────────────────────────────
+// ── Refresh loop (tab "Now") ─────────────────────────────────
 let timer = null;
 
 async function refresh() {
@@ -617,7 +622,7 @@ async function refresh() {
   const authFailed = settled.some((x) => x.status === "rejected" && x.reason instanceof AuthError);
 
   if (!ok("health")) {
-    $("path-summary").textContent = "Kurier nu răspunde. Verifică containerul.";
+    $("path-summary").textContent = t("gw.down");
     $("path-summary").className = "path-summary bad";
     $("updated").textContent = "";
     return;
@@ -635,9 +640,7 @@ async function refresh() {
     $("key-form").hidden = false;
     $("key-error").hidden = !getKey();
     const k = getKey();
-    $("key-error").textContent = k.startsWith("alertd_")
-      ? "Aceasta e o cheie Klopot (alertd_…). Aici trebuie cheia gateway-ului: SMS_API_KEY din fișierul .env al gateway-ului."
-      : `Cheia introdusă (${k.length} caractere) nu e acceptată. Folosește valoarea SMS_API_KEY din fișierul .env al gateway-ului (fără „SMS_API_KEY=”).`;
+    $("key-error").textContent = k.startsWith("alertd_") ? t("key.klopot") : t("key.wrong", { n: k.length });
     if (document.activeElement !== $("key-input")) $("key-input").focus();
     $("updated").textContent = "";
     return;
@@ -645,8 +648,8 @@ async function refresh() {
   $("key-form").hidden = true;
   const failed = names.filter((n) => r[n].status === "rejected" && n !== "status");
   $("updated").textContent = failed.length
-    ? `actualizat parțial (${failed.join(", ")} indisponibil)`
-    : `actualizat ${new Date().toLocaleTimeString("ro-RO")}`;
+    ? t("updated.partial", { what: failed.join(", ") })
+    : t("updated.at", { time: new Date().toLocaleTimeString(locale()) });
 }
 
 function schedule() {
@@ -654,7 +657,22 @@ function schedule() {
   timer = setInterval(() => { if (!document.hidden && !$("panel-now").hidden) refresh(); }, REFRESH_MS);
 }
 
+// ── Language ─────────────────────────────────────────────────
+let lastSearchRan = false;
+
+function switchLanguage() {
+  setLang(LANG === "ro" ? "en" : "ro");
+  setupFormatters();
+  applyStatic();
+  refresh();
+  if (statsData) renderStats();
+  if (lastSearchRan) runSearch(false);
+}
+
 document.addEventListener("DOMContentLoaded", () => {
+  setupFormatters();
+  applyStatic();
+  $("lang-toggle").addEventListener("click", switchLanguage);
   $("key-form").addEventListener("submit", (ev) => {
     ev.preventDefault();
     setKey(cleanKey($("key-input").value));
@@ -691,7 +709,7 @@ document.addEventListener("DOMContentLoaded", () => {
       loadStats();
     });
   }
-  $("search-form").addEventListener("submit", (ev) => { ev.preventDefault(); runSearch(false); });
+  $("search-form").addEventListener("submit", (ev) => { ev.preventDefault(); lastSearchRan = true; runSearch(false); });
   $("results-more").addEventListener("click", () => runSearch(true));
   let resizeTimer = null;
   window.addEventListener("resize", () => {

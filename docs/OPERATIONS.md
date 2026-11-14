@@ -4,13 +4,14 @@
 
 | Tab | Shows |
 |---|---|
-| **Acum** (now) | the SMS path hop by hop (gateway → router → SIM → network → queue) with a one-line verdict; the live sending budget per window and when a slot frees; MQTT / webhook / storage state; counters since start; the outbox with each message's last error (cancel button); sent and received SMS as a thread (repeats grouped) |
-| **Statistici** | SMS per local day (sent vs blocked/failed) for 7/30/90 days, with a table view; the alert types that send the most, with billed segments |
-| **Căutare** | the full history (`SMS_HISTORY_RETENTION_DAYS`) by text/number, outcome, type, critical only, date range |
+| **Now** | the SMS path hop by hop (gateway → router → SIM → network → queue) with a one-line verdict; the live sending budget per window and when a slot frees; MQTT / webhook / storage state; counters since start; the outbox with each message's last error (cancel button); sent and received SMS as a thread (repeats grouped) |
+| **Statistics** | SMS per local day (sent vs blocked/failed) for 7/30/90 days, with a table view; the alert types that send the most, with billed segments |
+| **Search** | the full history (`SMS_HISTORY_RETENTION_DAYS`) by text/number, outcome, type, critical only, date range |
 
 Two actions, both two-step: send a test SMS to the default recipient,
 cancel a queued SMS. The page asks for `SMS_API_KEY` once and keeps it in
-the browser. The UI is in Romanian for now.
+the browser. It speaks **English and Romanian**: it follows the browser's
+language and can be switched at the top right (the choice is remembered).
 
 ## Signals to watch
 
@@ -61,7 +62,7 @@ Counters reset on restart — graph them with `non_negative_difference()`.
 | Inbound SMS marked `stale` | older than `SMS_INBOX_STALE_SECONDS` when it could be delivered; check `SMS_MODEM_TIMEZONE` if *every* SMS is stale |
 | Webhook `forward_error: HTTP 401` | `SMS_INBOX_WEBHOOK_TOKEN` doesn't match the receiver |
 | Startup warning "apply migrations/00X" | schema older than the code; apply that file ([DEPLOY.md](DEPLOY.md)) |
-| Status page: "Cheia nu e acceptată" | wrong key; paste the `SMS_API_KEY` value (or the whole `.env` line) |
+| Status page: "The key you entered … isn't accepted" | wrong key; paste the `SMS_API_KEY` value (or the whole `.env` line) |
 
 ## Housekeeping
 

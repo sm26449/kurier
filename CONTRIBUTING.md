@@ -39,6 +39,8 @@ docs/OPERATIONS.md, "Testing against MySQL").
   see `storage.py`).
 - **Untrusted text in the UI** goes through `textContent`, never HTML;
   no inline script or style (CSP). `tests/test_ui.py` enforces it.
+- **UI text** lives in `src/ui/i18n.js`, English and Romanian with the
+  same keys (tested); never hard-code a sentence in `app.js`.
 - Every behaviour change ships with a test; every user-visible change gets
   a CHANGELOG entry.
 
