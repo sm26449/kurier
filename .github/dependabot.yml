@@ -11,6 +11,11 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    ignore:
+      # The Python version is chosen deliberately (image, CI and docs move
+      # together), not bumped to the newest release.
+      - dependency-name: python
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
   - package-ecosystem: github-actions
     directory: /
     schedule:
