@@ -4,6 +4,13 @@ All notable changes to Kurier are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+- Brand assets in `docs/brand/` (wordmark, relay mark, favicon, social
+  card), in the same family as Klopot. The status page gets a favicon and
+  the mark in its header.
+
 ## [1.12.0] — 2026-11-15
 
 ### Added
