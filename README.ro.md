@@ -37,6 +37,17 @@ stricat.
   real, un grafic pe zile cu ce s-a trimis și ce s-a blocat, alertele cele
   mai zgomotoase și căutare în tot istoricul.
 
+## Cum se leagă
+
+```
+  serviciile tale ──REST / MQTT──▶ ┌──────────┐ ──REST/ubus──▶ ┌──────────────┐ ──LTE──▶ 📱
+  (alertare,                       │  Kurier  │                │  Teltonika   │
+   automatizări)  ◀─MQTT/webhook── └──────────┘ ◀──gsmctl───── │ router RutOS │ ◀─LTE──  📱
+                                       │                        └──────────────┘
+                                MySQL (opțional): istoric, coadă,
+                                arhiva SMS-urilor primite, chei de idempotență
+```
+
 ## Pornire rapidă
 
 Ai nevoie de Docker cu Compose v2 și de un router Teltonika cu modem SMS și
@@ -64,9 +75,36 @@ Configurarea routerului (utilizator dedicat, permisiuni, particularități):
 sau existent, TLS pentru un hostname doar din LAN):
 [docs/DEPLOY.md](docs/DEPLOY.md).
 
+## Variante de instalare
+
+| Fișiere compose | La ce folosește |
+|---|---|
+| `compose.yaml` + `compose.mysql.yaml` + `compose.backup.yaml` | de sine stătător, MySQL inclus, backup zilnic (implicit) |
+| `+ compose.traefik.yaml` | adaugă propriul Traefik cu Let's Encrypt (HTTP-01 sau DNS-01) și listă de IP-uri permise |
+| `compose.yaml` + `compose.proxy.yaml` | în spatele unui Traefik pe care îl ai deja |
+| `compose.yaml` singur | MySQL extern (`MYSQL_HOST`…) sau deloc (totul în memorie) |
+
+Detalii, TLS pentru nume de host doar din LAN, actualizări și backup:
+[docs/DEPLOY.md](docs/DEPLOY.md).
+
+## Cum îl folosești
+
+```json
+POST /api/sms/send
+{"message": "Baterie 14 % — sub pragul critic",
+ "severity": "critical", "dedup_key": "soc_critical",
+ "idempotency_key": "delivery-1234", "source": "alerting"}
+```
+
+Doar `message` e obligatoriu. Răspunsuri: `200` trimis · `202` pus în coadă ·
+`409` duplicat · `429` limită de rată (`Retry-After`). Contractul complet,
+topicurile MQTT și formatul SMS-urilor primite: [docs/API.md](docs/API.md).
+
 ## Documentație
 
 Documentația detaliată e în engleză:
+[instalare pas cu pas](docs/INSTALL.md) ·
+[integrări](docs/INTEGRATIONS.md) (Home Assistant, Node-RED, Grafana…) ·
 [API](docs/API.md) · [arhitectură](docs/ARCHITECTURE.md) ·
 [deploy](docs/DEPLOY.md) · [router Teltonika](docs/TELTONIKA.md) ·
 [operare](docs/OPERATIONS.md) · [integrare Klopot](docs/INTEGRATION_KLOPOT.md) ·

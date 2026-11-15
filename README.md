@@ -79,7 +79,9 @@ curl -X POST http://127.0.0.1:5080/api/sms/send \
 
 and open **http://127.0.0.1:5080/ui** (it asks for the API key once).
 
-Router setup (a dedicated user, required permissions, known quirks):
+First time? [docs/INSTALL.md](docs/INSTALL.md) walks through it step by
+step, including the router settings Kurier depends on (JSON-RPC is off by
+default on RutOS). Router details and quirks:
 [docs/TELTONIKA.md](docs/TELTONIKA.md).
 
 ## Deployment options
@@ -111,7 +113,9 @@ MQTT topics and the inbound payload: [docs/API.md](docs/API.md).
 
 | | |
 |---|---|
-| [docs/API.md](docs/API.md) | send/receive contract, status codes, idempotency, health |
+| [docs/INSTALL.md](docs/INSTALL.md) | step by step, from router settings to the first SMS, with what to expect |
+| [docs/INTEGRATIONS.md](docs/INTEGRATIONS.md) | Home Assistant, Node-RED, Grafana, Uptime Kuma, Alertmanager, scripts |
+| [docs/API.md](docs/API.md) | send/receive contract, status codes, idempotency, MQTT topics, health |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | components, data flows, design decisions |
 | [docs/DEPLOY.md](docs/DEPLOY.md) | compose overlays, TLS, configuration reference, upgrades |
 | [docs/TELTONIKA.md](docs/TELTONIKA.md) | router prerequisites and quirks |

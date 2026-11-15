@@ -40,7 +40,10 @@ CF_DNS_API_TOKEN=…        # dns01 with Cloudflare (Zone:DNS:Edit)
 ALLOWED_CIDRS=127.0.0.1/32,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16
 ```
 
-`http01` needs the hostname reachable from the internet on port 80.
+`dns01` is wired for **Cloudflare** only (`deploy/traefik/tls-dns01.env`);
+for another DNS provider change the provider name and its credentials
+variable there (Traefik/lego provider list). `http01` needs the hostname
+reachable from the internet on port 80.
 `dns01` doesn't: it also works for a **LAN-only hostname** — a DNS record
 pointing at a private IP — which is the recommended setup: HTTPS for the
 status page, nothing reachable from outside.

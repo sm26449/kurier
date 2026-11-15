@@ -58,7 +58,8 @@ Counters reset on restart — graph them with `non_negative_difference()`.
 | `429` | rate limit; `Retry-After` says when; check the budget on `/ui`. Critical alerts should send `severity: critical` |
 | `409` | duplicate within `SMS_DEDUP_SECONDS` (same number + `dedup_key`/text) — already sent or queued |
 | `422 … different request` | an `idempotency_key` reused for another message — producer bug |
-| `api_mode: rest`, empty inbox/status | the router user can't run `gsmctl` over ubus ([TELTONIKA.md](TELTONIKA.md)) |
+| `api_mode: rest`, empty inbox/status | JSON-RPC is disabled on the router (off by default), or the router user can't run `gsmctl` through it ([TELTONIKA.md](TELTONIKA.md#router-settings)) |
+| Router "unreachable" although it answers pings | it redirects HTTP to HTTPS → `TELTONIKA_SCHEME=https` |
 | Inbound SMS marked `stale` | older than `SMS_INBOX_STALE_SECONDS` when it could be delivered; check `SMS_MODEM_TIMEZONE` if *every* SMS is stale |
 | Webhook `forward_error: HTTP 401` | `SMS_INBOX_WEBHOOK_TOKEN` doesn't match the receiver |
 | Startup warning "apply migrations/00X" | schema older than the code; apply that file ([DEPLOY.md](DEPLOY.md)) |

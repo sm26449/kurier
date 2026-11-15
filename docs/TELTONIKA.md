@@ -20,16 +20,39 @@ read endpoints answer `403`, so reads go through `gsmctl` over ubus.
 With REST only, sending works and inbox/status don't (`api_mode: rest`
 in `/api/health`).
 
+## Router settings
+
+Menu names follow Teltonika's RUT241 manual and may differ slightly
+between firmware versions. The walk-through is in [INSTALL.md](INSTALL.md).
+
+| Setting | Where | Needed for |
+|---|---|---|
+| SIM inserted, PIN entered or lock off | *Network → Mobile* (*General → SIM configuration*, *Utilities → SIM PIN management*) | everything |
+| **Enable JSON-RPC** — off by default | *System → Administration → Access Control → General*, on the HTTP or HTTPS row. Firmware 7.18+: install the JSON-RPC package from the Package Manager first | receiving SMS and modem status (the `/ubus` calls above) |
+| HTTP and/or HTTPS access from the LAN | same page | match it with `TELTONIKA_SCHEME` (below) |
+
+A manual test in *Services → Mobile Utilities → Messages* (send and read)
+tells you whether a problem is the SIM/network or Kurier.
+
 ## Account
 
 `TELTONIKA_USER` / `TELTONIKA_PASS` must be able to:
 
 - use the REST API for **Messages** (send);
-- open a ubus session and run **`file.exec` on `/usr/sbin/gsmctl`**.
+- open a JSON-RPC (ubus) session and run **`file.exec` on `/usr/sbin/gsmctl`**.
 
-The admin account can. A dedicated, restricted user is better practice;
-make sure it keeps both permissions — if `gsmctl` isn't allowed, sending
-still works but inbound SMS and modem status stay empty.
+Kurier is tested with the router's **`admin`** account, which can do both.
+
+A separate user for Kurier (*System → Administration → User Settings →
+System Users → Add New User*, group `admin`) is worth having: you can
+change or revoke Kurier's password without touching your own login.
+RutOS groups can also be narrowed (*Groups → Edit*: read/write allow or
+deny lists), but Teltonika documents those lists for WebUI pages only —
+whether a narrowed group may still call the Messages API and `file.exec`
+is neither documented nor tested here. If you try it, check the result:
+`api_mode` in `/api/health` must stay `hybrid`. With `rest`, sending still
+works but inbound SMS and modem status stay empty. Reports are welcome
+(there is an issue template for them).
 
 Set `TELTONIKA_MODEM` to the modem id (`1-1` on single-modem routers).
 
@@ -37,7 +60,9 @@ Set `TELTONIKA_MODEM` to the modem id (`1-1` on single-modem routers).
 
 By default Kurier talks to the router over plain HTTP, so the router
 password crosses the LAN unencrypted on every login. RutOS also serves
-its API over HTTPS:
+its API over HTTPS — and when the router has **Redirect to HTTPS** on
+(*Access Control → General*; newer firmware may ship HTTPS-only), plain
+HTTP does not work at all and Kurier reports the router as unreachable:
 
 ```
 TELTONIKA_SCHEME=https

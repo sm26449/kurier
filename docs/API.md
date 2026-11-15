@@ -1,7 +1,7 @@
 # Kurier — API contract
 
 Base URL: `http://<host>:5080` (in a Docker network: `http://kurier:5080`). Interactive schema: `/docs`.
-MQTT topics keep the historical prefix `sms-gateway/`.
+MQTT topics keep the historical prefix `sms-gateway/` ([MQTT](#mqtt)).
 Authentication: header `X-API-Key` = `SMS_API_KEY` on every `/api/sms/*` request.
 With no key configured the API answers `503` (closed) unless
 `SMS_ALLOW_NO_AUTH=true`. `/api/health` and `/` need no key.
@@ -131,15 +131,68 @@ Always `200` while the process runs; state in the body. Consumers (Klopot
 
 ## Other endpoints
 
-`GET /api/sms/outbox`, `DELETE /api/sms/outbox/{id}`, `GET /api/sms/history?limit=1..100`,
-`GET /api/sms/budget` (live rate-window usage + connection state), `GET /api/sms/stats?days=1..90`, `GET /api/sms/history/search` (filters `q`, `type`, `source`, `status`, `priority`, `since`, `until`, `limit`, `offset`), `GET /api/sms/status` (signal RSSI/RSRP/RSRQ/SINR, operator, network, band, modem temperature, SIM, model, IMEI), `GET /api/sms/metrics` (flat numeric: `sent`, `failed`, `queued`,
-`blocked_rate_limit`, `blocked_duplicate`, `segments_sent`,
-`idempotent_replays`, `outbox_*`, `inbox_*`, signal), `GET /api/sms/status`.
+All need `X-API-Key`. Times are UTC, ISO 8601.
+
+| Endpoint | Returns |
+|---|---|
+| `GET /api/sms/outbox` | SMS still waiting for the router, in delivery order: `id`, `number`, `message`, `priority`, `created_at`, `attempts`, `next_attempt_at`, `last_error` (`404` if `SMS_OUTBOX_ENABLED=false`) |
+| `DELETE /api/sms/outbox/{id}` | cancels a waiting SMS (`404` if it is not pending any more) |
+| `GET /api/sms/history?limit=1..100` | the most recent send attempts (memory, newest first): `number`, `message`, `priority`, `success`, `timestamp`, `detail`, `source`, `type`, `segments` |
+| `GET /api/sms/history/search` | the full history in MySQL. Filters: `q` (text or number), `type`, `source`, `status` (`sent` \| `blocked` \| `duplicate` \| `failed` \| `queued`), `priority`, `since`, `until`, `limit` (1–200), `offset` |
+| `GET /api/sms/budget` | per window (`normal_minute`, `normal_hour`, `critical_hour`): `used`, `limit`, `frees_in_seconds`; `dedup_seconds`, `dedup_active`; `connections` (`mqtt.enabled/connected/broker`, `webhook.enabled/forwarded/failures`, `history_store`) |
+| `GET /api/sms/stats?days=1..90` | `per_day` (local days, `TZ`): `sent`, `blocked`, `duplicate`, `failed`, `queued`, `segments`; the same per alert `type`; `totals` |
+| `GET /api/sms/status` | modem: `signal_strength` (RSSI), `rsrp`, `rsrq`, `sinr`, `operator`, `sim_state`, `connection_type`, `band`, `modem_temperature`, `modem_model`, `imei` (`502` if the router is unreachable) |
+| `GET /api/sms/metrics` | flat numbers, see [Metrics](#metrics) |
+| `GET /api/sms/inbox`, `GET\|DELETE /api/sms/inbox/{id}` | the inbound archive (see [Receive](#receive--modem--mqtt--webhook)) |
+| `GET /` | `{"service": "kurier", "version": "…"}` — no key |
+
+`/docs` (Swagger UI) and `/openapi.json` describe the same API and are
+served without a key (they contain no data). Swagger UI loads its assets
+from a CDN, so `/docs` needs internet access in the browser; the status
+page `/ui` does not.
+
+### Metrics
+
+Counters since the last start (they reset on restart), plus current state:
+
+| Keys | Meaning |
+|---|---|
+| `sent`, `failed`, `queued` | send attempts by outcome |
+| `blocked_rate_limit`, `blocked_duplicate` | refused with `429` / `409` |
+| `segments_sent` | SMS parts billed (router's `sms_used`) |
+| `idempotent_replays` | requests answered from an idempotency key |
+| `rate_normal_minute_used`, `rate_normal_hour_used`, `rate_critical_hour_used` | current use of each budget |
+| `outbox_pending`, `outbox_oldest_age_seconds` | queue now |
+| `outbox_delivered`, `outbox_expired`, `outbox_cancelled` | what happened to queued SMS |
+| `inbox_received`, `inbox_unauthorized`, `inbox_stale`, `inbox_expired`, `inbox_published`, `inbox_forwarded`, `inbox_forward_failures`, `inbox_deleted` | inbound SMS |
+| `mqtt_connected` | `1` / `0` |
+| `rssi`, `rsrp`, `rsrq`, `sinr`, `modem_temperature` | last known signal (absent until first read) |
+| `uptime_seconds` | since start |
+
+## MQTT
+
+Off unless `MQTT_BROKER` is set. The topic prefix `sms-gateway/` is fixed:
+run one Kurier per broker. All JSON, QoS 1.
+
+| Topic | Direction | Retained | Payload |
+|---|---|---|---|
+| `sms-gateway/send` | you → Kurier | no | the same JSON as `POST /api/sms/send`. **No API key**: protect the topic with broker ACLs. An invalid payload is logged and dropped |
+| `sms-gateway/sent` | Kurier → you | no | the outcome of each SMS requested **over MQTT**, and of every SMS leaving the outbox: `number`, `message`, `timestamp`, `success`, then `queued`, `segments`, `replayed` (sent or queued) or `detail` (refused: rate limit, duplicate, error). From the outbox: `from_outbox: true`, `outbox_id`, `status` (`sent` \| `expired` \| `cancelled`) |
+| `sms-gateway/inbox` | Kurier → you | no | a received SMS (see [Receive](#receive--modem--mqtt--webhook)) |
+| `sms-gateway/availability` | Kurier → you | yes | `online` / `offline` (plain text; Last Will, so a crash also says `offline`) |
+| `sms-gateway/status` | Kurier → you | yes | on connect and every 5 min: `signal`, `rsrp`, `sinr`, `rsrq`, `operator`, `sim_state`, `connection_type`, `band`, `modem_temperature`, `timestamp` |
+| `sms-gateway/metrics` | Kurier → you | yes | every 60 s: the [Metrics](#metrics) object |
+
+```bash
+mosquitto_pub -h mosquitto -t sms-gateway/send \
+  -m '{"message": "Pump stopped", "severity": "critical", "dedup_key": "pump_stopped"}'
+mosquitto_sub -h mosquitto -t 'sms-gateway/#' -v
+```
 
 ## Examples
 
 ```bash
-# Minimal (what Klopot 1.0.1 sends today)
+# Minimal
 curl -X POST localhost:5080/api/sms/send -H "X-API-Key: $K" -H 'Content-Type: application/json' \
   -d '{"phone": "+40712345678", "message": "Test"}'
 

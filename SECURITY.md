@@ -39,8 +39,9 @@ phone numbers beyond what is needed to demonstrate the issue.
   behind a proxy with an IP allowlist (`compose.proxy.yaml`,
   `compose.traefik.yaml` — private ranges by default). A LAN-only hostname
   with a DNS-01 certificate gives HTTPS without any public exposure.
-- **Use a dedicated router account** for `TELTONIKA_USER` (docs/TELTONIKA.md),
-  not the admin account, and a strong password.
+- **Give Kurier its own router user** (docs/TELTONIKA.md) with a strong
+  password, so it can be rotated or revoked without touching your own
+  login.
 - **Prefer HTTPS to the router** (`TELTONIKA_SCHEME=https`): over HTTP the
   router password crosses the LAN in clear text (docs/TELTONIKA.md).
 - **Inbound SMS are untrusted input.** Sender ids can be spoofed. Consumers
@@ -52,7 +53,8 @@ phone numbers beyond what is needed to demonstrate the issue.
   credentials that can subscribe to it, if you only use REST).
 - **The MySQL user needs only** `SELECT, INSERT, UPDATE, DELETE`.
 - The container runs as an unprivileged user (UID 10001) with
-  `no-new-privileges`.
+  `no-new-privileges`, and does not receive the MySQL root password or the
+  DNS API token that share its `.env`.
 - Rate limits (`SMS_RATE_LIMIT_*`) cap the damage of a buggy or hostile
   client; keep them.
 

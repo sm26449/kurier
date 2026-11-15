@@ -11,6 +11,8 @@ adheres to [Semantic Versioning](https://semver.org/).
   `/api/sms/*` request now answers `503` instead of being accepted without
   authentication. To keep the old behaviour on a closed network set
   `SMS_ALLOW_NO_AUTH=true`. `/api/health` is unaffected.
+- The gateway container no longer receives `MYSQL_ROOT_PASSWORD` and
+  `CF_DNS_API_TOKEN` from the shared `.env` (it never used them).
 - FastAPI 0.163 / Starlette 1.10 / Uvicorn 0.54 (the previous Starlette
   0.41 had known advisories); pip upgraded and setuptools removed from the
   image. CI audits the pinned dependencies (`pip-audit`, also weekly);
@@ -26,6 +28,16 @@ adheres to [Semantic Versioning](https://semver.org/).
   applies them after the backup (`--no-migrate` to skip).
 - **HTTPS to the router**: `TELTONIKA_SCHEME=https`, with
   `TELTONIKA_VERIFY_TLS` for routers that have a trusted certificate.
+
+### Documentation
+- [docs/INSTALL.md](docs/INSTALL.md): step-by-step install with the router
+  settings Kurier needs (JSON-RPC is off by default on RutOS) and the
+  expected output of every step.
+- [docs/INTEGRATIONS.md](docs/INTEGRATIONS.md): Home Assistant, Node-RED,
+  Grafana, Uptime Kuma, Alertmanager, shell, Python, MQTT.
+- API.md: endpoint table, metrics and a full MQTT topic reference;
+  `.env.example` lists every variable the compose overlays read.
+- Issue and pull-request templates.
 
 ### Changed
 - **MQTT is off when `MQTT_BROKER` is empty**, and empty is now the default
