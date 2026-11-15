@@ -22,7 +22,7 @@ jobs:
           code="$(sed -n 's/^__version__ = "\(.*\)"/\1/p' src/__init__.py)"
           test "v$code" = "$GITHUB_REF_NAME" || {
             echo "tag $GITHUB_REF_NAME but src/__init__.py says $code" >&2; exit 1; }
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.11"
       - name: Tests
