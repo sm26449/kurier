@@ -28,6 +28,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   applies them after the backup (`--no-migrate` to skip).
 - **HTTPS to the router**: `TELTONIKA_SCHEME=https`, with
   `TELTONIKA_VERIFY_TLS` for routers that have a trusted certificate.
+- Brand assets in `docs/brand/` (wordmark, relay mark, favicon, social
+  card), in the same family as Klopot. The status page gets a favicon and
+  the mark in its header.
 
 ### Documentation
 - [docs/INSTALL.md](docs/INSTALL.md): step-by-step install with the router

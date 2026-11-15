@@ -1,4 +1,9 @@
-# Kurier
+<h1>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/brand/kurier-wordmark-dark.svg">
+    <img src="docs/brand/kurier-wordmark.svg" alt="Kurier" height="48">
+  </picture>
+</h1>
 
 **Transport SMS pentru sisteme self-hosted, printr-un router LTE Teltonika.**
 Serviciile tale trimit SMS printr-un API REST/MQTT mic; SMS-urile primite de
