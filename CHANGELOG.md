@@ -4,6 +4,20 @@ All notable changes to Kurier are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.14.1] — 2026-11-15
+
+### Changed
+- Dependencies: aiomqtt 2.5.1, pydantic-settings 2.16.2 (tests: pytest
+  9.2, pytest-asyncio 1.4.1). MQTT was exercised against a real broker
+  with the new client.
+- CI: a pull request that touches the image or the release workflow now
+  builds the multi-arch image without publishing it; GitHub Actions
+  updated to their current major versions. Dependabot no longer proposes
+  Python base-image version jumps — the image stays on Python 3.11.
+
+### Added
+- `docs/brand/social-preview.png`, the social card rasterised.
+
 ## [1.14.0] — 2026-11-15
 
 ### Added
