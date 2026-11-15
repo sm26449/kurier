@@ -26,7 +26,7 @@ jobs:
   image:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Tag matches the code version
         if: github.ref_type == 'tag'
         run: |
