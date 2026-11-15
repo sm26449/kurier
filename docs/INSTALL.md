@@ -47,11 +47,39 @@ firmware versions.
 ```bash
 git clone https://github.com/sm26449/kurier.git
 cd kurier
+```
+
+### The short way: `./install.sh`
+
+```bash
+./install.sh
+```
+
+It asks about a dozen questions (Enter accepts the suggestion in
+brackets), then does steps 3 to 6 for you:
+
+- tries the router login **before** starting anything, tells you if the
+  password is wrong or JSON-RPC is off, and uses HTTPS when the router
+  offers it;
+- generates the API key and the database passwords;
+- writes `.env` (your previous one is kept as `.env.bak-<time>`);
+- starts the containers, waits until Kurier answers and offers to send a
+  test SMS;
+- prints the status page address and the API key.
+
+Run it again to change anything — your current values are the suggestions.
+`./install.sh --advanced` also walks through every other setting;
+`./install.sh --help` lists the options. Continue with
+[step 7](#7-receive-one).
+
+The rest of this page is the same thing by hand.
+
+## 3. Configure
+
+```bash
 cp .env.example .env
 chmod 600 .env
 ```
-
-## 3. Configure
 
 Generate three secrets (hex, so nothing in them needs quoting):
 
@@ -81,8 +109,9 @@ MYSQL_ROOT_PASSWORD=<generated>
 
 Two things to know:
 
-- A `$` in a value (a router password, for instance) must be written `$$`
-  — Compose treats `$` as a variable.
+- A value containing `$`, `#`, spaces or quotes (a router password, for
+  instance) goes in single quotes: `TELTONIKA_PASS='pa$s word'`. Unquoted,
+  Compose treats `$` as a variable. (The installer does this for you.)
 - `SMS_DEFAULT_RECIPIENTS` is both *who gets an SMS sent without a number*
   and *whose incoming SMS are marked `authorized`*.
 

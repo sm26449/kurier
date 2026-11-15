@@ -64,7 +64,23 @@ jobs:
             | jq -e '.services.kurier.environment
                      | .MYSQL_ROOT_PASSWORD == "" and .CF_DNS_API_TOKEN == ""'
       - name: Shell scripts
-        run: shellcheck -S warning scripts/*.sh
+        run: shellcheck -S warning install.sh scripts/*.sh
+      - name: Installer writes a valid .env without questions
+        run: |
+          rm -f .env
+          ./install.sh --yes --no-start --skip-router-check \
+            TELTONIKA_PASS='p$a"s w' SMS_DEFAULT_RECIPIENTS=+40700000001
+          docker compose config --format json > cfg.json
+          jq -e '.services.kurier.environment
+                 | .TELTONIKA_PASS == "p$$a\"s w"   # config prints a literal $ as $$
+                   and (.SMS_API_KEY | length) == 48
+                   and (.MYSQL_PASSWORD | length) == 48' cfg.json
+          jq -e '.services | has("mysql") and has("backup")' cfg.json
+          cp .env first.env
+          ./install.sh --yes --no-start --skip-router-check
+          cmp first.env .env    # a second run changes nothing
+          ./install.sh --yes --no-start --skip-router-check DATABASE=none ACCESS=lan
+          grep -qx 'COMPOSE_FILE=compose.yaml' .env && grep -qx 'KURIER_BIND=0.0.0.0' .env
       - name: Image builds and runs unprivileged
         run: |
           docker build -t kurier:ci .

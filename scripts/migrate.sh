@@ -36,7 +36,12 @@ done
 DIR="${RT:-$SRC}"
 cd "$DIR"
 [[ -f .env ]] || { echo "no .env in $DIR" >&2; exit 1; }
-envval() { grep -E "^$1=" .env | tail -1 | cut -d= -f2- || true; }
+# Value of KEY in .env, without the quotes install.sh puts around special characters.
+envval() {
+  local v; v="$(grep -E "^$1=" .env | tail -1 | cut -d= -f2- || true)"
+  if [[ "$v" == \'*\' && ${#v} -ge 2 ]]; then v="${v:1:${#v}-2}"; v="${v//\\\'/\'}"; fi
+  printf '%s' "$v"
+}
 
 MIG="$SRC/migrations"
 [[ -d "$MIG" ]] || MIG="$DIR/migrations"

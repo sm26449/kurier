@@ -42,6 +42,10 @@ docs/OPERATIONS.md, "Testing against MySQL").
   no inline script or style (CSP). `tests/test_ui.py` enforces it.
 - **UI text** lives in `src/ui/i18n.js`, English and Romanian with the
   same keys (tested); never hard-code a sentence in `app.js`.
+- **A new setting** goes into `.env.example` with a comment above it:
+  `install.sh` reads its questions' defaults and the `--advanced` list
+  from that file. Ask about it in the installer only if most people must
+  answer.
 - Every behaviour change ships with a test; every user-visible change gets
   a CHANGELOG entry.
 

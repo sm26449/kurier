@@ -4,6 +4,22 @@ All notable changes to Kurier are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.14.0] — 2026-11-15
+
+### Added
+- **`./install.sh`**: sets Kurier up by asking a handful of questions
+  (router, phone number, database, access, MQTT), generates the secrets,
+  checks the router login and JSON-RPC before anything starts (and picks
+  HTTPS when the router offers it), writes `.env`, starts the containers
+  and offers a test SMS. Run it again to reconfigure: current values are
+  the defaults, the previous `.env` is saved, settings added by a newer
+  version are filled in. `--advanced` walks through every setting;
+  `--yes KEY=value…` runs without questions.
+
+### Changed
+- `scripts/deploy.sh` and `scripts/migrate.sh` read single-quoted values
+  from `.env` (the installer quotes values with special characters).
+
 ## [1.13.0] — 2026-11-15
 
 ### Security

@@ -60,16 +60,16 @@ RutOS 7.x (testat pe RUT241), accesibil de pe host.
 
 ```bash
 git clone https://github.com/sm26449/kurier.git && cd kurier
-cp .env.example .env
-#   completează TELTONIKA_HOST / TELTONIKA_USER / TELTONIKA_PASS,
-#   SMS_API_KEY (obligatoriu — fără el API-ul rămâne închis),
-#   SMS_DEFAULT_RECIPIENTS, MYSQL_PASSWORD, MYSQL_ROOT_PASSWORD
-docker compose up -d --build
+./install.sh
 ```
 
-Fără build: pune `KURIER_IMAGE=ghcr.io/sm26449/kurier:<versiune>` în `.env`
-(imagine publicată, amd64 și arm64) și pornește cu
-`docker compose up -d --no-build`.
+Instalatorul întreabă adresa și contul routerului, numărul tău de telefon
+și cum vrei să rulezi; generează singur secretele, verifică dacă routerul
+acceptă autentificarea, scrie `.env`, pornește containerele și îți propune
+un SMS de test. Îl poți rula din nou oricând vrei să schimbi ceva.
+
+Preferi manual? `cp .env.example .env`, editezi, `docker compose up -d --build`
+— toți pașii sunt în [docs/INSTALL.md](docs/INSTALL.md).
 
 Configurația implicită pornește Kurier cu un MySQL inclus (schema se creează
 la prima pornire) și un backup zilnic în `./backups`. Apoi deschide **http://127.0.0.1:5080/ui** (îți cere cheia

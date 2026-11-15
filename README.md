@@ -59,19 +59,18 @@ modem and RutOS 7.x (tested on a RUT241), reachable from the Docker host.
 
 ```bash
 git clone https://github.com/sm26449/kurier.git && cd kurier
-cp .env.example .env
-#   set TELTONIKA_HOST / TELTONIKA_USER / TELTONIKA_PASS,
-#   SMS_API_KEY (required — the API stays closed without it),
-#   SMS_DEFAULT_RECIPIENTS, MYSQL_PASSWORD, MYSQL_ROOT_PASSWORD
-docker compose up -d --build
+./install.sh
 ```
 
-The default `COMPOSE_FILE` starts Kurier with a bundled MySQL (schema
-created on first start) and a daily backup into `./backups`.
+The installer asks for the router's address and login, your phone number
+and how you want to run it; it generates the secrets, checks that the
+router accepts the login, writes `.env`, starts the containers and offers
+to send a test SMS. Run it again whenever you want to change something.
 
-No build needed if you use the published image (amd64 and arm64): add
-`KURIER_IMAGE=ghcr.io/sm26449/kurier:<version>` to `.env` and start with
-`docker compose up -d --no-build`.
+By default you get Kurier with a bundled MySQL (schema created on first
+start) and a daily backup into `./backups`. Prefer to do it by hand?
+`cp .env.example .env`, edit it, `docker compose up -d --build` —
+[docs/INSTALL.md](docs/INSTALL.md) has every step.
 
 Then:
 
