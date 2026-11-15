@@ -7,6 +7,12 @@ class Settings(BaseSettings):
     teltonika_user: str = "admin"
     teltonika_pass: str = ""
     teltonika_modem: str = "1-1"
+    # http (default) or https. Over http the router password crosses the
+    # LAN in clear text; RutOS also serves https, with a self-signed
+    # certificate unless you installed your own — hence verification is
+    # opt-in (TELTONIKA_VERIFY_TLS=true once the router has a trusted one).
+    teltonika_scheme: str = "http"
+    teltonika_verify_tls: bool = False
 
     # MQTT (optional). Empty MQTT_BROKER = MQTT off: nothing is subscribed
     # or published, and the status page says "not configured".

@@ -62,7 +62,13 @@ docker compose up -d --build
 ```
 
 The default `COMPOSE_FILE` starts Kurier with a bundled MySQL (schema
-created on first start) and a daily backup into `./backups`. Then:
+created on first start) and a daily backup into `./backups`.
+
+No build needed if you use the published image (amd64 and arm64): add
+`KURIER_IMAGE=ghcr.io/sm26449/kurier:<version>` to `.env` and start with
+`docker compose up -d --no-build`.
+
+Then:
 
 ```bash
 curl http://127.0.0.1:5080/api/health

@@ -16,6 +16,20 @@ Choose files with `COMPOSE_FILE` in `.env` (colon-separated):
 `docker compose up -d --build` then uses them. The API listens on
 `KURIER_BIND:KURIER_PORT` (default `127.0.0.1:5080`).
 
+### Published image instead of a build
+
+Every release is published as `ghcr.io/sm26449/kurier:<version>` (also
+`:<major>.<minor>` and `:latest`), for `linux/amd64` and `linux/arm64`.
+You still need the checkout — the compose files, `migrations/` and
+`scripts/` come from it — but nothing is built:
+
+```
+KURIER_IMAGE=ghcr.io/sm26449/kurier:1.13.0     # in .env; pin a version
+```
+```bash
+docker compose pull kurier && docker compose up -d --no-build
+```
+
 ### Own Traefik with TLS (`compose.traefik.yaml`)
 
 ```
@@ -63,9 +77,22 @@ The essentials:
 
 ## Database
 
-`compose.mysql.yaml` runs `migrations/*.sql` on the first start. For an
-existing MySQL, create a database and a user, then apply the migrations
-in order as an admin:
+`compose.mysql.yaml` runs `migrations/*.sql` on the first start; later
+ones are applied by [`scripts/migrate.sh`](../scripts/migrate.sh)
+(see [Upgrade](#upgrade)). It records what it applied in the table
+`sms_schema_migrations` and recognises a schema created before it existed.
+
+```bash
+scripts/migrate.sh --status     # applied / PENDING, changes nothing
+scripts/migrate.sh              # asks, then applies what is pending
+```
+
+The script works where MySQL is a container on this host: the bundled
+`mysql` service, or another stack's container named in
+`KURIER_MYSQL_CONTAINER`. It runs as that container's root user.
+
+For a MySQL elsewhere, create a database and a user, then apply the
+migrations in order as an admin:
 
 ```sql
 CREATE DATABASE sms_gateway CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -88,33 +115,46 @@ Keep the source checkout clean and run Kurier from its own directory —
 ```bash
 mkdir -p /srv/kurier/backups
 cp .env.example /srv/kurier/.env && chmod 600 /srv/kurier/.env   # edit it
-scripts/deploy.sh 1.10.0 --runtime-dir=/srv/kurier --dry-run
-scripts/deploy.sh 1.10.0 --runtime-dir=/srv/kurier
+scripts/deploy.sh 1.13.0 --runtime-dir=/srv/kurier --dry-run
+scripts/deploy.sh 1.13.0 --runtime-dir=/srv/kurier
 ```
 
 [`scripts/deploy.sh`](../scripts/deploy.sh) does: preflight (health,
-version) → MySQL backup of the four tables (`KURIER_MYSQL_CONTAINER` for an
-external server, else the bundled `mysql`) → rollback tag
+version, pending migrations) → MySQL backup of the four tables
+(`KURIER_MYSQL_CONTAINER` for an external server, else the bundled `mysql`)
+→ pending migrations (`scripts/migrate.sh`; `--no-migrate` skips them)
+→ rollback tag
 `kurier:rollback-pre-<label>` → `docker build -t kurier:<label>` → sync
 `compose*.yaml`, `deploy/`, `migrations/` into the runtime directory and set
 `KURIER_IMAGE` (old files saved under `backups/`) → recreate the `kurier`
 service → verify version, health and the startup log. Without
-`--runtime-dir` it deploys in the checkout itself. It does not apply
-migrations.
+`--runtime-dir` it deploys in the checkout itself. `--dry-run` prints the
+plan, including which migrations are pending, and changes nothing.
 
 Rollback: `KURIER_IMAGE=kurier:rollback-pre-<label>` in `.env`, then
 `docker compose up -d --no-build kurier`.
 
 ## Upgrade
 
+Read the CHANGELOG entry first (breaking changes are marked), then either
+let the deploy script do everything — backup, migrations, rollback tag,
+build, recreate, verify:
+
 ```bash
 git pull
-# apply any migrations/*.sql newer than your schema (CHANGELOG says which)
-# with a runtime directory: scripts/deploy.sh <version> --runtime-dir=… (does the rest)
-docker compose exec -T mysql sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE"' \
-  < migrations/00X_….sql          # bundled MySQL
-docker compose up -d --build
-curl -s 127.0.0.1:5080/ ; curl -s 127.0.0.1:5080/api/health
+scripts/deploy.sh <version> --dry-run     # shows the plan and pending migrations
+scripts/deploy.sh <version>               # add --runtime-dir=… if you use one
+```
+
+or do it step by step:
+
+```bash
+git pull
+scripts/migrate.sh                        # applies pending migrations (asks first)
+docker compose up -d --build              # published image: set the new KURIER_IMAGE
+                                          #   in .env, then `up -d --no-build`
+curl -s 127.0.0.1:5080/                   # {"service":"kurier","version":"<new>"}
+curl -s 127.0.0.1:5080/api/health
 ```
 
 Restarting is safe: the outbox, idempotency keys and the inbound archive

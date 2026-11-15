@@ -33,6 +33,22 @@ still works but inbound SMS and modem status stay empty.
 
 Set `TELTONIKA_MODEM` to the modem id (`1-1` on single-modem routers).
 
+## HTTP or HTTPS
+
+By default Kurier talks to the router over plain HTTP, so the router
+password crosses the LAN unencrypted on every login. RutOS also serves
+its API over HTTPS:
+
+```
+TELTONIKA_SCHEME=https
+TELTONIKA_VERIFY_TLS=false    # the router's certificate is self-signed by default
+```
+
+With `TELTONIKA_VERIFY_TLS=false` the connection is encrypted but the
+router is not authenticated; set it to `true` once the router has a
+certificate your Docker host trusts. `TELTONIKA_HOST` may carry a port
+(`192.168.1.1:8443`) if you moved the router's web port.
+
 ## Quirks we handle (and why)
 
 | Behaviour | Seen on | What Kurier does |

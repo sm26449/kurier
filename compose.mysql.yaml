@@ -5,7 +5,8 @@
 # Optional: MYSQL_DATABASE (default sms_gateway), MYSQL_USER (default sms_gateway).
 #
 # On the FIRST start (empty volume) migrations/*.sql run automatically, in
-# order. Later migrations must be applied by hand (docs/DEPLOY.md, "Upgrade").
+# order. After an upgrade, new ones are applied by scripts/migrate.sh
+# (docs/DEPLOY.md, "Upgrade").
 # Note: the image grants MYSQL_USER all privileges on MYSQL_DATABASE; the
 # gateway itself needs only SELECT, INSERT, UPDATE, DELETE.
 

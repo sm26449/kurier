@@ -16,6 +16,18 @@ class TeltonikaError(ConnectionError):
     """The router answered, but refused or failed the operation."""
 
 
+def router_base_url(host: str, scheme: str = "http") -> str:
+    """``TELTONIKA_HOST`` (+ ``TELTONIKA_SCHEME``) → base URL.
+
+    The host may carry a port (``192.168.1.1:8443``) or be a full URL
+    (``https://router.lan``), which then wins over the scheme setting.
+    """
+    host = host.strip().rstrip("/")
+    if "://" in host:
+        return host
+    return f"{'https' if scheme.strip().lower() == 'https' else 'http'}://{host}"
+
+
 class TeltonikaClient:
     """Client for Teltonika RUT241 SMS API.
 
@@ -29,14 +41,14 @@ class TeltonikaClient:
         self.user = settings.teltonika_user
         self.password = settings.teltonika_pass
         self.modem = settings.teltonika_modem
-        self.base_url = f"http://{self.host}"
+        self.base_url = router_base_url(settings.teltonika_host, settings.teltonika_scheme)
 
         self._client = httpx.AsyncClient(
             base_url=self.base_url,
             # Read timeout stays below Klopot's 15s request timeout so a hung
             # router yields a queued 202 instead of a client-side timeout.
             timeout=httpx.Timeout(10.0, connect=5.0),
-            verify=False,
+            verify=settings.teltonika_verify_tls,
         )
 
         # Auth state

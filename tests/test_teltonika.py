@@ -212,3 +212,23 @@ async def test_imei_is_read_once():
     await client._query_status()
     await client._query_status()
     assert router.calls.count("gsmctl:-i") == 1
+
+
+@pytest.mark.parametrize("host, scheme, expected", [
+    ("192.168.1.1", "http", "http://192.168.1.1"),
+    ("192.168.1.1", "https", "https://192.168.1.1"),
+    ("192.168.1.1:8443", "HTTPS", "https://192.168.1.1:8443"),
+    ("https://router.lan/", "http", "https://router.lan"),   # a full URL wins
+    ("router", "bogus", "http://router"),                    # unknown scheme → http
+])
+def test_router_base_url(host, scheme, expected):
+    from src.services.teltonika import router_base_url
+    assert router_base_url(host, scheme) == expected
+
+
+def test_router_https_is_opt_in_and_verification_too():
+    plain = TeltonikaClient(Settings(teltonika_host="router", teltonika_pass="x"))
+    assert plain.base_url == "http://router"
+    tls = TeltonikaClient(Settings(teltonika_host="router", teltonika_pass="x",
+                                   teltonika_scheme="https", teltonika_verify_tls=True))
+    assert tls.base_url == "https://router"

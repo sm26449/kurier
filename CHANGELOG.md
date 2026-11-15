@@ -16,6 +16,17 @@ adheres to [Semantic Versioning](https://semver.org/).
   image. CI audits the pinned dependencies (`pip-audit`, also weekly);
   Dependabot watches pip, the base image and the Actions.
 
+### Added
+- **Published image**: `ghcr.io/sm26449/kurier:<version>` for amd64 and
+  arm64, built by a release workflow on every version tag. Set
+  `KURIER_IMAGE` and start with `docker compose up -d --no-build`.
+- **`scripts/migrate.sh`**: applies pending migrations and records them in
+  `sms_schema_migrations`; an existing schema (001–004) is recognised, not
+  re-run. `scripts/deploy.sh` shows pending migrations in its plan and
+  applies them after the backup (`--no-migrate` to skip).
+- **HTTPS to the router**: `TELTONIKA_SCHEME=https`, with
+  `TELTONIKA_VERIFY_TLS` for routers that have a trusted certificate.
+
 ### Changed
 - **MQTT is off when `MQTT_BROKER` is empty**, and empty is now the default
   (it was `mosquitto`). If you relied on the default, set

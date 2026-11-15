@@ -41,6 +41,8 @@ phone numbers beyond what is needed to demonstrate the issue.
   with a DNS-01 certificate gives HTTPS without any public exposure.
 - **Use a dedicated router account** for `TELTONIKA_USER` (docs/TELTONIKA.md),
   not the admin account, and a strong password.
+- **Prefer HTTPS to the router** (`TELTONIKA_SCHEME=https`): over HTTP the
+  router password crosses the LAN in clear text (docs/TELTONIKA.md).
 - **Inbound SMS are untrusted input.** Sender ids can be spoofed. Consumers
   acting on commands must require `authorized: true`, and for anything that
   changes state, confirm with a one-time code sent back to the number.

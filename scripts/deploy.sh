@@ -6,6 +6,7 @@
 #   scripts/deploy.sh <label> --yes                 # no prompt
 #   scripts/deploy.sh <label> --dry-run             # preflight + plan only
 #   scripts/deploy.sh <label> --runtime-dir=DIR     # deploy into a separate runtime directory
+#   scripts/deploy.sh <label> --no-migrate          # leave the database schema alone
 #
 # <label> names the deploy (e.g. "1.10.0"): image tag kurier:<label>, rollback
 # tag kurier:rollback-pre-<label>, backup file names.
@@ -18,28 +19,31 @@
 #                       (old copies saved to DIR/backups/), and KURIER_IMAGE in
 #                       DIR/.env is pointed at the new image (old .env saved).
 #
-# Steps: 1 preflight (health, version, outbox) · 2 backup (mysqldump of the
-# four tables, gzip-verified; skipped without MySQL) · 3 rollback tag ·
-# 4 build kurier:<label> · 5 docker compose up (recreates what changed) ·
-# 6 verify (version, health, startup log).
+# Steps: 1 preflight (health, version, pending migrations) · 2 backup
+# (mysqldump of the four tables, gzip-verified; skipped without MySQL), then
+# pending migrations (scripts/migrate.sh) · 3 rollback tag · 4 build
+# kurier:<label> · 5 docker compose up (recreates what changed) · 6 verify
+# (version, health, startup log).
 #
-# MySQL for the backup: KURIER_MYSQL_CONTAINER (env or .env — an external
-# server's container), else the bundled `mysql` service. New migrations are NOT applied here —
-# apply them first (docs/DEPLOY.md, "Upgrade"); Kurier logs which are missing.
+# MySQL for the backup and the migrations: KURIER_MYSQL_CONTAINER (env or
+# .env — an external server's container), else the bundled `mysql` service.
+# A MySQL that is not a container on this host: both are skipped — apply
+# migrations by hand (docs/DEPLOY.md, "Database").
 set -euo pipefail
 
 SRC="$(cd "$(dirname "$0")/.." && pwd)"
-LABEL=""; YES=0; DRY=0; RT="${KURIER_RUNTIME_DIR:-}"
+LABEL=""; YES=0; DRY=0; MIGRATE=1; RT="${KURIER_RUNTIME_DIR:-}"
 for a in "$@"; do
   case "$a" in
     --yes) YES=1 ;;
     --dry-run) DRY=1 ;;
+    --no-migrate) MIGRATE=0 ;;
     --runtime-dir=*) RT="${a#*=}" ;;
     -*) echo "unknown option: $a" >&2; exit 2 ;;
     *) LABEL="$a" ;;
   esac
 done
-[[ -n "$LABEL" ]] || { sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
+[[ -n "$LABEL" ]] || { sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//'; exit 2; }
 [[ "$LABEL" =~ ^[A-Za-z0-9._-]+$ ]] || { echo "label: letters, digits, . _ - only" >&2; exit 2; }
 
 DIR="${RT:-$SRC}"
@@ -64,9 +68,16 @@ else
   OLD_IMAGE=""; echo "kurier is not running in this compose project (first deploy here)"
 fi
 echo "target:  $NEW_IMAGE (code version $WANT_VERSION) from $SRC"
+MYSQL_C="${KURIER_MYSQL_CONTAINER:-$(envval KURIER_MYSQL_CONTAINER)}"
+[[ -n "$MYSQL_C" ]] || MYSQL_C="$(docker compose ps -q mysql 2>/dev/null || true)"
+migrate() { KURIER_MYSQL_CONTAINER="$MYSQL_C" "$SRC/scripts/migrate.sh" --runtime-dir="$DIR" "$@"; }
+if [[ -n "$MYSQL_C" ]] && (( MIGRATE )); then
+  echo "schema:"; migrate --status | sed 's/^/  /' || true
+fi
 
 say "Plan"
 echo "- backup MySQL tables to $DIR/backups/kurier-predeploy-$LABEL-$STAMP.sql.gz"
+[[ -n "$MYSQL_C" ]] && (( MIGRATE )) && echo "- apply the migrations marked PENDING above, if any"
 [[ -n "$OLD_IMAGE" ]] && echo "- tag $OLD_IMAGE as kurier:rollback-pre-$LABEL"
 echo "- docker build -t $NEW_IMAGE $SRC"
 [[ -n "$RT" ]] && echo "- sync compose*.yaml + deploy/ + migrations/ + scripts/backup.sh into $DIR, set KURIER_IMAGE=$NEW_IMAGE in $DIR/.env (backups first)"
@@ -76,8 +87,6 @@ if (( ! YES )); then read -r -p "Proceed? [y/N] " ok; [[ "$ok" == y* ]] || { ech
 
 mkdir -p backups
 say "2. Backup"
-MYSQL_C="${KURIER_MYSQL_CONTAINER:-$(envval KURIER_MYSQL_CONTAINER)}"
-[[ -n "$MYSQL_C" ]] || MYSQL_C="$(docker compose ps -q mysql 2>/dev/null || true)"
 DB="$(envval MYSQL_DATABASE)"; DB="${DB:-sms_gateway}"
 DBUSER="$(envval MYSQL_USER)"; DBUSER="${DBUSER:-sms_gateway}"
 DBPASS="$(envval MYSQL_PASSWORD)"
@@ -89,8 +98,12 @@ if [[ -n "$MYSQL_C" && -n "$DBPASS" ]]; then
   gzip -t "$OUT" && [[ $(zcat "$OUT" | grep -c 'CREATE TABLE') -ge 1 ]] \
     || { echo "backup failed or empty: $OUT" >&2; exit 1; }
   echo "ok: $OUT ($(du -h "$OUT" | cut -f1))"
+  if (( MIGRATE )); then
+    say "Migrations"
+    migrate --yes
+  fi
 else
-  echo "skipped (no MySQL container or no MYSQL_PASSWORD)"
+  echo "skipped (no MySQL container or no MYSQL_PASSWORD) — migrations too"
 fi
 
 if [[ -n "$OLD_IMAGE" ]]; then
@@ -134,4 +147,4 @@ ERRS="$(docker logs --since 2m "$CID" 2>&1 | grep -E 'ERROR|Traceback' || true)"
 [[ "$GOT" == "$WANT_VERSION" && -z "$ERRS" ]] || {
   echo; echo "VERIFY FAILED. Roll back: set KURIER_IMAGE=kurier:rollback-pre-$LABEL in .env, docker compose up -d --no-build kurier" >&2
   exit 1; }
-echo; echo "deployed $NEW_IMAGE. Add a release line to $DIR/README.md."
+echo; echo "deployed $NEW_IMAGE"

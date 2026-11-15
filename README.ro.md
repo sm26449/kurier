@@ -51,6 +51,10 @@ cp .env.example .env
 docker compose up -d --build
 ```
 
+Fără build: pune `KURIER_IMAGE=ghcr.io/sm26449/kurier:<versiune>` în `.env`
+(imagine publicată, amd64 și arm64) și pornește cu
+`docker compose up -d --no-build`.
+
 Configurația implicită pornește Kurier cu un MySQL inclus (schema se creează
 la prima pornire) și un backup zilnic în `./backups`. Apoi deschide **http://127.0.0.1:5080/ui** (îți cere cheia
 API o singură dată).
