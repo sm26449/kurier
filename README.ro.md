@@ -128,14 +128,11 @@ Apache License 2.0 — vezi [LICENSE](LICENSE) și [NOTICE](NOTICE).
 
 ---
 
-## Cine duce mesajele
+## Despre
 
-Kurier a fost construit de **[Stefan Maldaianu](https://github.com/sm26449)**
-— proprietarul cartelei SIM, al routerului de pe raft și al telefonului care
-trebuie să sune când pică tot restul — împreună cu
-**[Claude](https://claude.ai)** (Anthropic), care a scris cea mai mare parte
-din cod, a măsurat modemul până a recunoscut că ora lui e în UTC și încă
-numără segmente SMS în somn.
-
-Unul dintre noi hotărăște unde trebuie să ajungă mesajele. Celălalt se
-asigură că ajung — chiar și când routerul are o zi proastă.
+Kurier a pornit ca ultima verigă din alertarea unui sistem de energie de
+acasă: când internetul e căzut, un SMS tot ajunge. Rulează în producție pe
+instalația pentru care a fost construit — un RUT241 pe un raft și un telefon
+care trebuie să sune. Proiectat și operat de
+**[Stefan Maldaianu](https://github.com/sm26449)**; cea mai mare parte din cod
+a fost scrisă de **[Claude](https://claude.ai)** (Anthropic).

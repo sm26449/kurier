@@ -141,14 +141,11 @@ Apache License 2.0 — see [LICENSE](LICENSE) and [NOTICE](NOTICE).
 
 ---
 
-## Who carries the messages
+## About
 
-Kurier was built by **[Stefan Maldaianu](https://github.com/sm26449)** — owner
-of the SIM card, the router on the shelf and the phone that has to ring
-when everything else is down — and **[Claude](https://claude.ai)**
-(Anthropic), who wrote most of the code, measured the modem until it
-confessed its timestamps were in UTC, and still counts SMS segments in
-its sleep.
-
-One of us decides where the messages should go. The other makes sure they
-get there — even when the router is having a bad day.
+Kurier started as the last link in a home energy system's alerting: when
+the internet is down, an SMS still gets through. It runs in production on
+the setup it was built for — a RUT241 on a shelf and a phone that has to
+ring. Designed and operated by
+**[Stefan Maldaianu](https://github.com/sm26449)**; most of the code written
+by **[Claude](https://claude.ai)** (Anthropic).
