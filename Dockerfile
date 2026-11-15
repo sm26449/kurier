@@ -1,4 +1,4 @@
-FROM python:3.11-slim
+FROM python:3.15-slim
 
 # Unprivileged runtime user: the app writes nothing to disk.
 RUN useradd --system --uid 10001 --no-create-home --shell /usr/sbin/nologin kurier
