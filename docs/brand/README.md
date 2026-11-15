@@ -18,6 +18,7 @@ is the dot of the `i`.
 | `kurier-mark-mono.svg` | The relay in `currentColor`, no tile (docs headers, print) |
 | `kurier-wordmark.svg` / `kurier-wordmark-dark.svg` | `kurier` wordmark — light / dark |
 | `social-preview.svg` | 1280×640 social card (symbol + wordmark + tagline on ink); rasterise to PNG for GitHub |
+| `social-preview.png` | that card rasterised (1280×640, tagline in Inter) — upload it under the repository's *Settings → Social preview*; regenerate it when the SVG changes |
 
 ## Geometry
 
