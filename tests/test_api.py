@@ -13,6 +13,7 @@ from tests.test_sms import FakeTeltonikaClient, make_service
 @pytest.fixture
 def api(monkeypatch):
     monkeypatch.setattr(settings, "sms_api_key", "")
+    monkeypatch.setattr(settings, "sms_allow_no_auth", True)
     svc, fake = make_service()
     app = FastAPI()
     app.include_router(sms.router)
@@ -76,6 +77,7 @@ def test_health_ok(api):
 
 def test_queued_send_returns_202_and_outbox_listing(monkeypatch):
     monkeypatch.setattr(settings, "sms_api_key", "")
+    monkeypatch.setattr(settings, "sms_allow_no_auth", True)
     svc, fake = make_service(outbox=True)
 
     async def down(number, message):
@@ -101,3 +103,23 @@ def test_queued_send_returns_202_and_outbox_listing(monkeypatch):
 
     assert client.delete(f"/api/sms/outbox/{body['outbox_id']}").status_code == 200
     assert client.get("/api/sms/outbox").json() == []
+
+
+def test_api_closed_without_a_key(api, monkeypatch):
+    # Fail closed: no SMS_API_KEY and no explicit opt-out → nothing is sent.
+    client, fake = api
+    monkeypatch.setattr(settings, "sms_allow_no_auth", False)
+    r = client.post("/api/sms/send", json={"message": "x"})
+    assert r.status_code == 503 and "SMS_API_KEY" in r.json()["detail"]
+    assert client.get("/api/sms/history").status_code == 503
+    assert fake.sent == []
+    # Health stays readable (monitors) and a key, once set, opens the API.
+    assert client.get("/api/health").status_code == 200
+    monkeypatch.setattr(settings, "sms_api_key", "secret")
+    assert client.post("/api/sms/send", json={"message": "x"},
+                       headers={"X-API-Key": "secret"}).status_code == 200
+
+
+def test_no_auth_is_an_explicit_opt_out(api):
+    client, _ = api  # fixture sets SMS_ALLOW_NO_AUTH=true
+    assert client.post("/api/sms/send", json={"message": "x"}).status_code == 200

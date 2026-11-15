@@ -165,3 +165,23 @@ def test_history_record_is_non_blocking_and_ordered():
     gate.set()
     store.close()  # flushes
     assert written == ["one", "two", "three"]
+
+
+@pytest.mark.asyncio
+async def test_mqtt_is_off_without_a_broker():
+    svc, _ = make_service()
+    svc.settings.mqtt_broker = ""
+    mqtt = MQTTService(svc, svc.settings)
+    svc.mqtt = mqtt
+    await mqtt.start()
+    assert mqtt.enabled is False and mqtt._task is None and mqtt.connected is False
+    assert svc.connections()["mqtt"] == {"enabled": False, "connected": False, "broker": ""}
+    await mqtt.stop()
+
+
+@pytest.mark.asyncio
+async def test_mqtt_enabled_with_a_broker():
+    svc, _ = make_service()
+    svc.settings.mqtt_broker = "mosquitto"
+    assert MQTTService(svc, svc.settings).enabled is True
+    assert svc.connections()["mqtt"]["broker"].startswith("mosquitto:")

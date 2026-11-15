@@ -322,8 +322,9 @@ class SMSService:
         s = self.settings
         inbox = self.inbox.metrics() if self.inbox is not None else {}
         return {
-            "mqtt": {"connected": bool(self.mqtt and self.mqtt.connected),
-                     "broker": f"{s.mqtt_broker}:{s.mqtt_port}"},
+            "mqtt": {"enabled": bool(s.mqtt_broker.strip()),
+                     "connected": bool(self.mqtt and self.mqtt.connected),
+                     "broker": f"{s.mqtt_broker}:{s.mqtt_port}" if s.mqtt_broker.strip() else ""},
             "webhook": {"enabled": bool(s.sms_inbox_webhook_url),
                         "forwarded": inbox.get("inbox_forwarded", 0),
                         "failures": inbox.get("inbox_forward_failures", 0)},

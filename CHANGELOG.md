@@ -4,6 +4,30 @@ All notable changes to Kurier are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.13.0] — unreleased
+
+### Security
+- **The API is closed without a key.** With `SMS_API_KEY` empty, every
+  `/api/sms/*` request now answers `503` instead of being accepted without
+  authentication. To keep the old behaviour on a closed network set
+  `SMS_ALLOW_NO_AUTH=true`. `/api/health` is unaffected.
+- FastAPI 0.163 / Starlette 1.10 / Uvicorn 0.54 (the previous Starlette
+  0.41 had known advisories); pip upgraded and setuptools removed from the
+  image. CI audits the pinned dependencies (`pip-audit`, also weekly);
+  Dependabot watches pip, the base image and the Actions.
+
+### Changed
+- **MQTT is off when `MQTT_BROKER` is empty**, and empty is now the default
+  (it was `mosquitto`). If you relied on the default, set
+  `MQTT_BROKER=mosquitto` in `.env`. The status page shows "MQTT not
+  configured"; `GET /api/sms/budget` adds `connections.mqtt.enabled`.
+- A broker that stays down is logged once, not every 5 seconds (retries
+  continue).
+- Bundled MySQL and the backup sidecar use `mysql:8.4` (LTS; 8.0 is end of
+  life). An existing 8.0 data volume is upgraded in place on the first
+  start — take a backup first (`BACKUP_ON_START=true` or
+  `scripts/deploy.sh`).
+
 ## [1.12.0] — 2026-11-15
 
 ### Added

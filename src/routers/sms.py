@@ -30,6 +30,10 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/sms", tags=["SMS"], dependencies=[])
 
 
+NO_KEY_DETAIL = ("SMS_API_KEY is not set: the API is closed. Set SMS_API_KEY "
+                 "(or SMS_ALLOW_NO_AUTH=true to run without authentication) and restart.")
+
+
 def get_sms_service() -> SMSService:
     """Dependency — overridden in main.py via app.dependency_overrides."""
     raise RuntimeError("SMSService not initialized")
@@ -38,17 +42,17 @@ def get_sms_service() -> SMSService:
 def require_api_key(
     x_api_key: Annotated[str | None, Header(alias="X-API-Key")] = None,
 ) -> None:
-    """Enforce API key when ``settings.sms_api_key`` is configured.
+    """Every ``/api/sms/*`` request must carry ``X-API-Key`` = ``SMS_API_KEY``.
 
-    Empty / unset means legacy unauthenticated mode (backwards compat).
-    Once an operator sets ``SMS_API_KEY`` in the environment, every
-    request to ``/api/sms/*`` must carry the matching ``X-API-Key``
-    header — protects the SIM-quota and modem-control surface that
-    was previously open to the LAN.
+    Fail closed: with no key configured the API is refused (503) rather
+    than left open — it can spend SIM credit. ``SMS_ALLOW_NO_AUTH=true``
+    is the explicit opt-out (closed networks only).
     """
     expected = settings.sms_api_key
     if not expected:
-        return  # opt-in: not configured, no enforcement
+        if settings.sms_allow_no_auth:
+            return
+        raise HTTPException(status_code=503, detail=NO_KEY_DETAIL)
     if not x_api_key or not secrets.compare_digest(x_api_key.encode(), expected.encode()):
         raise HTTPException(status_code=401, detail="invalid or missing X-API-Key")
 

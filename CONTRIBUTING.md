@@ -23,7 +23,7 @@ docker run --rm -u 0 -v "$PWD":/app -w /app kurier-dev \
 
 Tests use fakes for the router (`httpx.MockTransport`), MQTT and storage;
 no hardware needed. MySQL-specific code is exercised against a throwaway
-`mysql:8.0` container (see the integration scripts described in
+`mysql:8.4` container (see the integration scripts described in
 docs/OPERATIONS.md, "Testing against MySQL").
 
 ## Rules of thumb

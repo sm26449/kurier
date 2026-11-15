@@ -5,6 +5,8 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+  schedule:
+    - cron: "17 5 * * 1"   # weekly: new advisories against unchanged pins
 
 permissions:
   contents: read
@@ -20,6 +22,18 @@ jobs:
           cache: pip
       - run: pip install -r requirements.txt -r requirements-dev.txt
       - run: pytest -q
+
+  dependencies:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Known vulnerabilities in pinned dependencies
+        run: |
+          pip install pip-audit
+          pip-audit -r requirements.txt
 
   packaging:
     runs-on: ubuntu-24.04

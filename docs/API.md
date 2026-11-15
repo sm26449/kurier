@@ -2,7 +2,9 @@
 
 Base URL: `http://<host>:5080` (in a Docker network: `http://kurier:5080`). Interactive schema: `/docs`.
 MQTT topics keep the historical prefix `sms-gateway/`.
-Authentication: header `X-API-Key` on `/api/sms/*` when `SMS_API_KEY` is set.
+Authentication: header `X-API-Key` = `SMS_API_KEY` on every `/api/sms/*` request.
+With no key configured the API answers `503` (closed) unless
+`SMS_ALLOW_NO_AUTH=true`. `/api/health` and `/` need no key.
 
 ## Send — `POST /api/sms/send`
 
@@ -39,6 +41,7 @@ Labels match `^[A-Za-z0-9_.:-]+$`. Empty strings count as absent.
 | `422` | Empty / missing `message`, or an `idempotency_key` reused for a different request. |
 | `429` | Rate limit; `Retry-After` = seconds until a slot frees. |
 | `502` | Router error and outbox disabled. |
+| `503` | `SMS_API_KEY` is not configured (the API is closed). |
 
 Optional fields never cause a rejection: labels are sanitized, numbers
 clamped (`ttl_seconds` 60–86400, `max_segments` 1–10) or dropped if not

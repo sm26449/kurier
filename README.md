@@ -56,7 +56,8 @@ modem and RutOS 7.x (tested on a RUT241), reachable from the Docker host.
 git clone https://github.com/sm26449/kurier.git && cd kurier
 cp .env.example .env
 #   set TELTONIKA_HOST / TELTONIKA_USER / TELTONIKA_PASS,
-#   SMS_API_KEY, SMS_DEFAULT_RECIPIENTS, MYSQL_PASSWORD, MYSQL_ROOT_PASSWORD
+#   SMS_API_KEY (required — the API stays closed without it),
+#   SMS_DEFAULT_RECIPIENTS, MYSQL_PASSWORD, MYSQL_ROOT_PASSWORD
 docker compose up -d --build
 ```
 
@@ -115,7 +116,8 @@ MQTT topics and the inbound payload: [docs/API.md](docs/API.md).
 
 ## Security
 
-Kurier can spend your SIM credit. Set `SMS_API_KEY`, keep the API off the
+Kurier can spend your SIM credit. The API refuses to run without
+`SMS_API_KEY`; keep it off the
 internet (loopback by default; the proxy overlays add an IP allowlist), and
 treat received SMS as untrusted input. See [SECURITY.md](SECURITY.md).
 

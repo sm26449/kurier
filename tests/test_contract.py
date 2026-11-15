@@ -272,6 +272,7 @@ async def test_housekeeping_prunes_idempotency():
 @pytest.fixture
 def api(monkeypatch):
     monkeypatch.setattr(settings, "sms_api_key", "")
+    monkeypatch.setattr(settings, "sms_allow_no_auth", True)
     svc, fake = recording_service()
     app = FastAPI()
     app.include_router(sms.router)

@@ -41,6 +41,13 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     # Startup
     logger.info("Kurier starting…")
+    if not settings.sms_api_key:
+        if settings.sms_allow_no_auth:
+            logger.warning("SMS_ALLOW_NO_AUTH=true: /api/sms/* is open to anyone who can "
+                           "reach this port — they can send SMS on your SIM")
+        else:
+            logger.error("SMS_API_KEY is not set: /api/sms/* answers 503 until you set it "
+                         "(or SMS_ALLOW_NO_AUTH=true) and restart")
 
     teltonika = TeltonikaClient(settings)
     try:

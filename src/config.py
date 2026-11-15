@@ -8,8 +8,9 @@ class Settings(BaseSettings):
     teltonika_pass: str = ""
     teltonika_modem: str = "1-1"
 
-    # MQTT
-    mqtt_broker: str = "mosquitto"
+    # MQTT (optional). Empty MQTT_BROKER = MQTT off: nothing is subscribed
+    # or published, and the status page says "not configured".
+    mqtt_broker: str = ""
     mqtt_port: int = 1883
     mqtt_user: str = ""
     mqtt_pass: str = ""
@@ -61,12 +62,12 @@ class Settings(BaseSettings):
     sms_outbox_retention_days: int = 30
     sms_default_recipients: str = ""
 
-    # API auth — when set, /api/sms/* requires header `X-API-Key`.
-    # Empty (default) keeps the legacy unauthenticated mode for
-    # backwards compat with deployments that haven't configured a key
-    # yet. The operator-facing docs recommend setting this since the
-    # port (5080) is published to the host network.
+    # API auth — /api/sms/* requires header `X-API-Key` matching this.
+    # Fail closed: with no key configured every /api/sms/* request is
+    # refused (503) — the API can spend SIM credit. SMS_ALLOW_NO_AUTH=true
+    # is the explicit opt-out for a closed network.
     sms_api_key: str = ""
+    sms_allow_no_auth: bool = False
 
     # Default country dial code for phone normalization. E.164 numbers
     # with explicit ``+`` pass through; bare national-format numbers

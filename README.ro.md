@@ -46,7 +46,8 @@ RutOS 7.x (testat pe RUT241), accesibil de pe host.
 git clone https://github.com/sm26449/kurier.git && cd kurier
 cp .env.example .env
 #   completează TELTONIKA_HOST / TELTONIKA_USER / TELTONIKA_PASS,
-#   SMS_API_KEY, SMS_DEFAULT_RECIPIENTS, MYSQL_PASSWORD, MYSQL_ROOT_PASSWORD
+#   SMS_API_KEY (obligatoriu — fără el API-ul rămâne închis),
+#   SMS_DEFAULT_RECIPIENTS, MYSQL_PASSWORD, MYSQL_ROOT_PASSWORD
 docker compose up -d --build
 ```
 
@@ -69,7 +70,7 @@ Documentația detaliată e în engleză:
 
 ## Securitate
 
-Kurier poate cheltui creditul SIM-ului. Setează `SMS_API_KEY`, nu expune
+Kurier poate cheltui creditul SIM-ului. API-ul nu pornește fără `SMS_API_KEY`; nu expune
 API-ul pe internet (implicit ascultă doar pe loopback, iar variantele cu
 proxy adaugă o listă de IP-uri permise) și tratează SMS-urile primite ca
 date nesigure. Detalii în [SECURITY.md](SECURITY.md).

@@ -252,6 +252,8 @@ def test_inbox_api_serves_the_archive(monkeypatch):
     from src.routers import sms
 
     monkeypatch.setattr(settings, "sms_api_key", "")
+
+    monkeypatch.setattr(settings, "sms_allow_no_auth", True)
     svc, _ = make_service()
     inbox, modem, published = make_inbox()
     svc.inbox = inbox

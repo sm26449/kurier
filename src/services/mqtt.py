@@ -46,8 +46,16 @@ class MQTTService:
         if sms_service.outbox is not None:
             sms_service.outbox.add_listener(self._on_outbox_done)
 
+    @property
+    def enabled(self) -> bool:
+        """MQTT is optional: an empty MQTT_BROKER turns it off."""
+        return bool(self.settings.mqtt_broker.strip())
+
     async def start(self):
-        """Start MQTT client with reconnect loop."""
+        """Start MQTT client with reconnect loop (no-op when not configured)."""
+        if not self.enabled:
+            logger.info("MQTT off (MQTT_BROKER is empty)")
+            return
         self._task = asyncio.create_task(self._connection_loop())
 
     @property
@@ -80,10 +88,12 @@ class MQTTService:
 
     async def _connection_loop(self):
         """Maintain MQTT connection with automatic reconnect."""
+        failures = 0  # consecutive; only the first is logged above DEBUG
         while True:
             try:
                 async with aiomqtt.Client(**self._client_kwargs()) as client:
                     self._client = client
+                    failures = 0
                     logger.info("MQTT connected to %s:%d", self.settings.mqtt_broker, self.settings.mqtt_port)
                     await self._publish(TOPIC_AVAILABILITY, "online", retain=True)
                     await client.subscribe(TOPIC_SEND, qos=1)
@@ -105,7 +115,12 @@ class MQTTService:
                         self._client = None
 
             except aiomqtt.MqttError as e:
-                logger.warning("MQTT connection lost: %s — reconnecting in 5s", describe_error(e))
+                # A broker that stays down is retried every 5 s; say so once,
+                # not 17 000 times a day.
+                failures += 1
+                logger.log(logging.WARNING if failures == 1 else logging.DEBUG,
+                           "MQTT connection to %s:%d lost: %s — retrying every 5s until it is back",
+                           self.settings.mqtt_broker, self.settings.mqtt_port, describe_error(e))
                 await asyncio.sleep(5)
             except asyncio.CancelledError:
                 logger.info("MQTT service stopped")

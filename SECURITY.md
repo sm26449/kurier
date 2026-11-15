@@ -32,7 +32,9 @@ phone numbers beyond what is needed to demonstrate the issue.
 
 ## Hardening checklist
 
-- **Set `SMS_API_KEY`.** Without it, anyone who reaches port 5080 can send SMS.
+- **Set `SMS_API_KEY`** (long and random). Without a key the API refuses every
+  `/api/sms/*` request with `503`; `SMS_ALLOW_NO_AUTH=true` opens it to anyone
+  who reaches port 5080 — use that only on a closed network.
 - **Don't expose it publicly.** Bind the port to loopback (default) or put it
   behind a proxy with an IP allowlist (`compose.proxy.yaml`,
   `compose.traefik.yaml` — private ranges by default). A LAN-only hostname

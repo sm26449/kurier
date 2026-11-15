@@ -6,7 +6,7 @@ Choose files with `COMPOSE_FILE` in `.env` (colon-separated):
 
 | Files | What you get |
 |---|---|
-| `compose.yaml:compose.mysql.yaml` | Kurier + MySQL 8; schema created on first start |
+| `compose.yaml:compose.mysql.yaml` | Kurier + MySQL 8.4 LTS; schema created on first start |
 | `…:compose.backup.yaml` | + daily dump of the four tables into `./backups` (**default** with the line above) |
 | `…:compose.traefik.yaml` | + Traefik v3 (Let's Encrypt), IP allowlist, read-only Docker socket proxy |
 | `compose.yaml:compose.proxy.yaml` | joins a Traefik you already run (Docker or file provider) |
@@ -52,11 +52,11 @@ The essentials:
 | Variable | Purpose |
 |---|---|
 | `TELTONIKA_HOST`, `TELTONIKA_USER`, `TELTONIKA_PASS` | router access ([TELTONIKA.md](TELTONIKA.md)) |
-| `SMS_API_KEY` | required header `X-API-Key` on `/api/sms/*` — set it |
+| `SMS_API_KEY` | **required**: header `X-API-Key` on `/api/sms/*`. Unset → the API answers `503` (`SMS_ALLOW_NO_AUTH=true` opts out) |
 | `SMS_DEFAULT_RECIPIENTS` | who gets SMS sent without a number; also the `authorized` senders for inbound SMS |
 | `SMS_DEFAULT_COUNTRY_CODE` | prefix for national numbers (`07…` → `+407…`) |
 | `SMS_RATE_LIMIT_*`, `SMS_DEDUP_SECONDS` | sending policy |
-| `MQTT_*` | optional MQTT in/out |
+| `MQTT_*` | optional MQTT in/out; empty `MQTT_BROKER` = off |
 | `MYSQL_*` | optional persistence; empty `MYSQL_PASSWORD` = in-memory |
 | `SMS_INBOX_WEBHOOK_URL`, `…_TOKEN` | optional push of received SMS |
 | `TZ` | local days in the statistics |

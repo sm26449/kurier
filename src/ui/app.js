@@ -231,8 +231,9 @@ function renderBudget(b) {
   const c = b.connections || {};
   const mqtt = c.mqtt || {}, hook = c.webhook || {};
   $("connections").replaceChildren(
-    el("span", {}, el("i", { class: `dot ${mqtt.connected ? "ok" : "bad"}` }),
-      mqtt.connected ? t("conn.mqttOn") : t("conn.mqttOff", { broker: mqtt.broker || "broker" })),
+    el("span", {}, el("i", { class: `dot ${mqtt.enabled === false ? "" : mqtt.connected ? "ok" : "bad"}` }),
+      mqtt.enabled === false ? t("conn.mqttNone")
+        : mqtt.connected ? t("conn.mqttOn") : t("conn.mqttOff", { broker: mqtt.broker || "broker" })),
     el("span", {}, el("i", { class: `dot ${hook.enabled ? (hook.failures ? "bad" : "ok") : ""}` }),
       hook.enabled
         ? t("conn.hookOn", { ok: nf.format(hook.forwarded), fail: nf.format(hook.failures) })

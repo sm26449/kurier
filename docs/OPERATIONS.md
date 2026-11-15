@@ -62,6 +62,8 @@ Counters reset on restart — graph them with `non_negative_difference()`.
 | Inbound SMS marked `stale` | older than `SMS_INBOX_STALE_SECONDS` when it could be delivered; check `SMS_MODEM_TIMEZONE` if *every* SMS is stale |
 | Webhook `forward_error: HTTP 401` | `SMS_INBOX_WEBHOOK_TOKEN` doesn't match the receiver |
 | Startup warning "apply migrations/00X" | schema older than the code; apply that file ([DEPLOY.md](DEPLOY.md)) |
+| Every `/api/sms/*` call answers `503 … SMS_API_KEY is not set` | no key in `.env` → set `SMS_API_KEY`, `docker compose up -d` |
+| Status page says "MQTT not configured" | `MQTT_BROKER` is empty — fine if you only use REST; set it to enable MQTT |
 | Status page: "The key you entered … isn't accepted" | wrong key; paste the `SMS_API_KEY` value (or the whole `.env` line) |
 
 ## Housekeeping
@@ -88,7 +90,7 @@ MySQL (network, password). Restore: [DEPLOY.md](DEPLOY.md#backup).
 ## Testing against MySQL
 
 Unit tests run without MySQL. To exercise the SQL, start a throwaway
-`mysql:8.0`, apply `migrations/*.sql`, create a user with
+`mysql:8.4`, apply `migrations/*.sql`, create a user with
 `SELECT, INSERT, UPDATE, DELETE`, and run the stores
 (`MySQLConnection`, `SendHistoryStore`, `MySQLOutboxStore`,
 `MySQLInboxStore`, `MySQLIdempotencyStore`) against it from the image

@@ -1,7 +1,9 @@
-# Direct dependencies, pinned. Transitive pins (pydantic, paho-mqtt) keep
-# rebuilds reproducible — pydantic drifted 2.13 → 2.14 between two builds.
-fastapi==0.115.6
-uvicorn[standard]==0.34.0
+# Direct dependencies, pinned. Transitive pins (starlette, pydantic,
+# paho-mqtt) keep rebuilds reproducible and let `pip-audit -r` (CI) and
+# Dependabot see what actually ships.
+fastapi==0.163.0
+starlette==1.10.0
+uvicorn[standard]==0.54.0
 httpx==0.28.1
 aiomqtt==2.3.0
 paho-mqtt==2.2.0

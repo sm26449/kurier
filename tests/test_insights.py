@@ -127,6 +127,7 @@ async def test_search_in_memory_filters():
 @pytest.fixture
 def api(monkeypatch):
     monkeypatch.setattr(settings, "sms_api_key", "")
+    monkeypatch.setattr(settings, "sms_allow_no_auth", True)
     svc, _ = make_service()
     app = FastAPI()
     app.include_router(sms.router)
