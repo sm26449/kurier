@@ -41,7 +41,7 @@ only what the task needs:
 | a setting | `src/config.py` + its comment in `.env.example` |
 | the HTTP contract | [docs/API.md](docs/API.md) (status codes, fields, MQTT topics) |
 | the router's quirks | [docs/TELTONIKA.md](docs/TELTONIKA.md) |
-| the status page | `src/ui/index.html`, `app.js` (fetch → render → charts, one file), `i18n.js`, `app.css` |
+| the status page | `src/ui/index.html` loads, in order: `i18n.js` (texts, `t()`), `core.js` (DOM helpers, API key, `api()`, formatting), `now.js` (tab Now + refresh loop), `insights.js` (statistics chart, search), `app.js` (tabs, language, event wiring); styles in `app.css` |
 
 Everything else:
 

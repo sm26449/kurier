@@ -25,6 +25,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   afterwards. Rate and dedup limits moved to `services/send_limits.py`
   and the history with its statistics and search to
   `services/send_history.py`; `sms_service.py` keeps the send path.
+  The status page script is split into `core.js` (helpers), `now.js`
+  (tab Now), `insights.js` (statistics, search) and `app.js` (wiring);
+  the page looks and behaves the same.
 
 ## [1.14.1] — 2026-11-15
 

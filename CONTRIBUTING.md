@@ -44,7 +44,7 @@ docs/OPERATIONS.md, "Testing against MySQL").
 - **Untrusted text in the UI** goes through `textContent`, never HTML;
   no inline script or style (CSP). `tests/test_ui.py` enforces it.
 - **UI text** lives in `src/ui/i18n.js`, English and Romanian with the
-  same keys (tested); never hard-code a sentence in `app.js`.
+  same keys (tested); never hard-code a sentence in the other scripts.
 - **A new setting** goes into `.env.example` with a comment above it:
   `install.sh` reads its questions' defaults and the `--advanced` list
   from that file. Ask about it in the installer only if most people must
