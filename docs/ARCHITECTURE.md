@@ -13,7 +13,7 @@ to do that reliably. It never interprets message text.
               │                         │                                       │
  MQTT ◀───────│ mqtt.publish_inbox ◀─ InboxService ◀── poll every 20 s ─────────┼─── router
  webhook ◀────│                        (archive → deliver → delete from SIM)    │
-              │ Housekeeping (daily prune)        storage.py ──────────────────┼──▶ MySQL
+              │ Housekeeping (daily prune)        storage/ ────────────────────┼──▶ MySQL
               │ /ui (static) · /api/health · /api/sms/{status,metrics,…}       │
               └────────────────────────────────────────────────────────────────┘
 ```
@@ -31,7 +31,7 @@ to do that reliably. It never interprets message text.
 | `services/mqtt.py` | MQTT in/out, Last Will, retained status/metrics |
 | `services/stats.py` | pure aggregation of the send history (per day, per type) |
 | `services/housekeeping.py` | daily retention pruning |
-| `storage.py` | MySQL and in-memory stores; schema probing |
+| `storage/` | one module per table family (`history`, `outbox`, `idempotency`, `inbox`), each with a MySQL and an in-memory store; `db.py`: connection, column probes |
 | `gsm7.py`, `phone.py` | GSM-7 transliteration/segment counting; E.164 normalization |
 | `ui/` | status page (static HTML/CSS/JS) |
 

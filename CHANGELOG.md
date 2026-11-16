@@ -4,6 +4,14 @@ All notable changes to Kurier are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Changed
+- Internal layout, no behaviour change: `src/storage.py` is now the
+  package `src/storage/` with one module per table family (`history`,
+  `outbox`, `idempotency`, `inbox`) plus `db.py`; `from src.storage
+  import …` still works.
+
 ## [1.14.1] — 2026-11-15
 
 ### Changed
