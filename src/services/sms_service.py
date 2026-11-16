@@ -12,16 +12,16 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 
 from src.config import Settings
-from src.errors import describe_error  # noqa: F401 — re-exported for routers/mqtt
+from src.errors import describe_error
 from src.gsm7 import segments_used, transliterate, truncate_to_segments
 from src.models.schemas import Priority, SendHistoryEntry, SendSMSRequest
 from src.phone import normalize_phone
-from src.services.idempotency import IdempotencyCache, IdempotencyConflict, fingerprint  # noqa: F401
+from src.services.idempotency import IdempotencyCache, fingerprint
 from src.services.inbox import InboxService
 from src.services.mqtt_status import MQTTStatus
 from src.services.outbox import Outbox, OutboxStore
 from src.services.send_history import SendHistory
-from src.services.send_limits import DuplicateMessage, RateLimitExceeded, SendLimits  # noqa: F401 — re-exported
+from src.services.send_limits import DuplicateMessage, RateLimitExceeded, SendLimits
 from src.services.teltonika import TeltonikaClient
 from src.storage import MemoryOutboxStore, SendHistoryStore
 

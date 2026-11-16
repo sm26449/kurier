@@ -14,7 +14,8 @@ from src.models.schemas import Priority, SendSMSRequest
 from src.routers import health, sms
 from src.services.housekeeping import Housekeeping
 from src.services.idempotency import IdempotencyCache
-from src.services.sms_service import DuplicateMessage, SendOptions
+from src.services.send_limits import DuplicateMessage
+from src.services.sms_service import SendOptions
 from src.storage import MemoryIdempotencyStore
 from tests.test_sms import make_service
 

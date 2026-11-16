@@ -8,7 +8,7 @@ import pytest
 from src.models.schemas import SendHistoryEntry
 from src.services.housekeeping import Housekeeping
 from src.services.mqtt import TOPIC_AVAILABILITY, TOPIC_SENT, MQTTService
-from src.services.sms_service import DuplicateMessage, RateLimitExceeded
+from src.services.send_limits import DuplicateMessage, RateLimitExceeded
 from src.storage import MemoryOutboxStore, SendHistoryStore
 from tests.test_sms import make_service
 

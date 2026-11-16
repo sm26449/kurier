@@ -96,7 +96,7 @@ a throwaway `mysql:8.4` (docs/OPERATIONS.md).
 | Compose config check | in a runtime dir with a `.env`: `docker compose config -q` (the source has no `.env` on purpose) |
 | Status page screenshots | Playwright/Chromium against `/ui`, API key via `localStorage["smsgw.apiKey"]`. Take one screenshot per change you want to judge; each one costs context |
 | Migrations | `scripts/migrate.sh [--status] [--runtime-dir=DIR]` — applies pending `migrations/*.sql` once, recorded in `sms_schema_migrations` |
-| Deploy | `scripts/deploy.sh <label> [--runtime-dir=DIR] [--dry-run] [--no-migrate]` — backup, migrations, rollback tag, build `kurier:<label>`, recreate, verify. **Ask before running it on a live host** |
+| Deploy | `scripts/deploy.sh <label> [--runtime-dir=DIR] [--dry-run] [--no-migrate] [--yes]` — backup, migrations, rollback tag, build `kurier:<label>`, recreate, verify. It asks `Proceed? [y/N]`; without a terminal that aborts (nothing changed), so pass `--yes` after the dry run. **Ask before running it on a live host** |
 | Installer | `./install.sh [--advanced] [--yes KEY=value…] [--no-start] [--skip-router-check]` — writes `.env` from `.env.example`, checks the router, starts the stack. Refuses to run while a compose project `kurier` runs from another directory; test it only in a scratch copy with its own `COMPOSE_PROJECT_NAME` |
 | Shell lint | `docker run --rm -v "$PWD":/s:ro koalaman/shellcheck:stable -S warning /s/install.sh /s/scripts/*.sh` |
 

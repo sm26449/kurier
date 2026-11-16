@@ -5,7 +5,7 @@ from datetime import timedelta
 import pytest
 
 from src.models.schemas import Priority
-from src.services.sms_service import DuplicateMessage
+from src.services.send_limits import DuplicateMessage
 from src.storage import MemoryOutboxStore
 from tests.test_sms import make_service
 

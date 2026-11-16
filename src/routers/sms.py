@@ -16,14 +16,10 @@ from src.models.schemas import (
     SendSMSRequest,
     SendSMSResponse,
 )
-from src.services.sms_service import (
-    DuplicateMessage,
-    RateLimitExceeded,
-    SMSService,
-    IdempotencyConflict,
-    describe_error,
-    options_from_request,
-)
+from src.errors import describe_error
+from src.services.idempotency import IdempotencyConflict
+from src.services.send_limits import DuplicateMessage, RateLimitExceeded
+from src.services.sms_service import SMSService, options_from_request
 
 logger = logging.getLogger(__name__)
 

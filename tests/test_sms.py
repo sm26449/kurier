@@ -4,7 +4,8 @@ import pytest
 
 from src.config import Settings
 from src.models.schemas import Priority
-from src.services.sms_service import DuplicateMessage, RateLimitExceeded, SMSService
+from src.services.send_limits import DuplicateMessage, RateLimitExceeded
+from src.services.sms_service import SMSService
 
 
 class FakeTeltonikaClient:
@@ -284,6 +285,6 @@ async def test_all_recipients_failing_raises():
 def test_describe_error_falls_back_to_type():
     import httpx
 
-    from src.services.sms_service import describe_error
+    from src.errors import describe_error
     assert describe_error(httpx.ReadTimeout("")) == "ReadTimeout"
     assert describe_error(ValueError("boom")) == "boom"
