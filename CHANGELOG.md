@@ -10,7 +10,9 @@ adheres to [Semantic Versioning](https://semver.org/).
 - Internal layout, no behaviour change: `src/storage.py` is now the
   package `src/storage/` with one module per table family (`history`,
   `outbox`, `idempotency`, `inbox`) plus `db.py`; `from src.storage
-  import …` still works.
+  import …` still works. Store selection and service wiring moved from
+  `main.py`'s lifespan into `src/wiring.py::build_services()` (covered
+  by `tests/test_wiring.py`); the startup log lines are unchanged.
 
 ## [1.14.1] — 2026-11-15
 

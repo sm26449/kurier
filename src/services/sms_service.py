@@ -92,8 +92,8 @@ class SMSService:
         self.client = client
         self.settings = settings
         self.idempotency = idempotency
-        self.inbox = None  # InboxService, set by main (archive API + metrics)
-        self.mqtt = None   # MQTTService, set by main (connection state)
+        self.inbox = None  # InboxService, set by wiring.build_services (archive API + metrics)
+        self.mqtt = None   # MQTTService, set by wiring.build_services (connection state)
 
         # Rate limiting — normal traffic and critical traffic have
         # separate windows. Critical bypasses the normal limits but

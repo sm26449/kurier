@@ -36,7 +36,8 @@ docs/OPERATIONS.md, "Testing against MySQL").
 - **Health is data.** `/api/health` always answers 200; state is in the body.
 - **Schema changes** ship as a new numbered file in `migrations/` and the
   code must keep working before it is applied (probe columns at startup —
-  see `src/storage/db.py::_has_columns`). `scripts/migrate.sh` applies each file once, by name:
+  see `src/storage/db.py::_has_columns`; the memory fallback when a table
+  is missing is in `src/wiring.py`). `scripts/migrate.sh` applies each file once, by name:
   never edit a released migration, add a new one.
 - **Untrusted text in the UI** goes through `textContent`, never HTML;
   no inline script or style (CSP). `tests/test_ui.py` enforces it.
