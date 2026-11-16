@@ -5,6 +5,9 @@ SMS between your services and a Teltonika router, in both directions, and
 never interprets the text. Please keep it that way — alert logic, bots and
 commands belong in the producer/consumer (e.g. Klopot).
 
+Coding agents: [AGENTS.md](AGENTS.md) has the same rules plus a map of
+where things live and which test covers what.
+
 ## Dev setup
 
 ```bash

@@ -5,8 +5,7 @@ __pycache__/
 .venv/
 *.egg-info/
 
-# Site-local files (CLAUDE.md: notes for coding agents, kept local)
+# Site-local files (CLAUDE.local.md: host notes for coding agents)
 compose.local.yaml
 CLAUDE.local.md
 secrets/
-CLAUDE.md
