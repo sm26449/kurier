@@ -53,9 +53,12 @@ Everything else:
 | CI | `.github/workflows/ci.yml` (tests, `pip-audit`, compose overlays, shellcheck, installer, image), `release.yml` (multi-arch image on a tag; build-only on PRs touching the image), `dependabot.yml` |
 | User docs | `docs/INSTALL.md`, `docs/INTEGRATIONS.md`, `docs/INTEGRATION_KLOPOT.md`, `docs/API.md`, `docs/DEPLOY.md`, `docs/TELTONIKA.md`, `docs/OPERATIONS.md`; brand rules `docs/brand/README.md` |
 
-`SMSService.inbox` and `SMSService.mqtt` are **set after construction**
-by `wiring.build_services()` (they report state in `/api/sms/status`);
-they are `None` in unit tests that build an `SMSService` directly.
+Every link between services is a constructor argument, made in
+`wiring.build_services()`. The one two-way relation, MQTT ↔ send service,
+goes through `services/mqtt_status.py::MQTTStatus`: `MQTTService` needs
+`SMSService` (to send and publish metrics) and writes the flag;
+`SMSService` only reads it. In unit tests that build an `SMSService`
+directly, `inbox` is `None` and MQTT reads "not connected".
 
 ## Tests
 

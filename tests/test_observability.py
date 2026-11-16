@@ -172,11 +172,21 @@ async def test_mqtt_is_off_without_a_broker():
     svc, _ = make_service()
     svc.settings.mqtt_broker = ""
     mqtt = MQTTService(svc, svc.settings)
-    svc.mqtt = mqtt
     await mqtt.start()
     assert mqtt.enabled is False and mqtt._task is None and mqtt.connected is False
     assert svc.connections()["mqtt"] == {"enabled": False, "connected": False, "broker": ""}
     await mqtt.stop()
+
+
+def test_mqtt_connection_state_reaches_status_and_metrics():
+    svc, _ = make_service()
+    mqtt = MQTTService(svc, svc.settings)
+    assert svc.connections()["mqtt"]["connected"] is False and svc.metrics()["mqtt_connected"] == 0
+    mqtt._set_client(object())  # what the connection loop does once connected
+    assert mqtt.connected and svc.connections()["mqtt"]["connected"] is True
+    assert svc.metrics()["mqtt_connected"] == 1
+    mqtt._set_client(None)      # connection lost
+    assert svc.connections()["mqtt"]["connected"] is False and svc.metrics()["mqtt_connected"] == 0
 
 
 @pytest.mark.asyncio

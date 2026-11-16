@@ -20,6 +20,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   import …` still works. Store selection and service wiring moved from
   `main.py`'s lifespan into `src/wiring.py::build_services()` (covered
   by `tests/test_wiring.py`); the startup log lines are unchanged.
+  The send service now gets the inbox and MQTT's connection state
+  (`MQTTStatus`) at construction instead of having them attached
+  afterwards.
 
 ## [1.14.1] — 2026-11-15
 

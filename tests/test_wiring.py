@@ -65,7 +65,7 @@ async def test_services_are_cross_linked(router_down):
     services = await build_services(settings)
     try:
         assert services.sms.inbox is services.inbox
-        assert services.sms.mqtt is services.mqtt
+        assert services.mqtt.status is services.sms.mqtt_status
         assert services.mqtt.publish_inbox in services.inbox._publishers
         assert services.sms.outbox is not None
         assert services.housekeeping is not None

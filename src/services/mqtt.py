@@ -18,6 +18,7 @@ from src.services.sms_service import (
     options_from_request,
 )
 from src.services.inbox import inbox_payload
+from src.services.mqtt_status import MQTTStatus
 from src.storage import InboxRecord, OutboxItem
 
 logger = logging.getLogger(__name__)
@@ -41,6 +42,7 @@ class MQTTService:
     def __init__(self, sms_service: SMSService, settings: Settings):
         self.sms = sms_service
         self.settings = settings
+        self.status: MQTTStatus = sms_service.mqtt_status
         self._client: aiomqtt.Client | None = None
         self._task: asyncio.Task | None = None
         if sms_service.outbox is not None:
@@ -61,6 +63,10 @@ class MQTTService:
     @property
     def connected(self) -> bool:
         return self._client is not None
+
+    def _set_client(self, client: aiomqtt.Client | None) -> None:
+        self._client = client
+        self.status.connected = client is not None
 
     async def stop(self):
         if self._task:
@@ -92,7 +98,7 @@ class MQTTService:
         while True:
             try:
                 async with aiomqtt.Client(**self._client_kwargs()) as client:
-                    self._client = client
+                    self._set_client(client)
                     failures = 0
                     logger.info("MQTT connected to %s:%d", self.settings.mqtt_broker, self.settings.mqtt_port)
                     await self._publish(TOPIC_AVAILABILITY, "online", retain=True)
@@ -112,7 +118,7 @@ class MQTTService:
                         # Graceful shutdown: say goodbye (the LWT covers crashes).
                         with contextlib.suppress(Exception):
                             await self._publish(TOPIC_AVAILABILITY, "offline", retain=True)
-                        self._client = None
+                        self._set_client(None)
 
             except aiomqtt.MqttError as e:
                 # A broker that stays down is retried every 5 s; say so once,
@@ -129,7 +135,7 @@ class MQTTService:
                 logger.error("MQTT unexpected error: %s — reconnecting in 10s", describe_error(e))
                 await asyncio.sleep(10)
             finally:
-                self._client = None
+                self._set_client(None)
 
     # ── sms-gateway/send ──────────────────────────────────────
 

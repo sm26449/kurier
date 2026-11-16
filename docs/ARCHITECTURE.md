@@ -29,6 +29,7 @@ to do that reliably. It never interprets message text.
 | `services/inbox.py` | inbound transport: poll → archive → MQTT/webhook → delete from modem |
 | `services/idempotency.py` | `idempotency_key` replay cache, conflict detection |
 | `services/mqtt.py` | MQTT in/out, Last Will, retained status/metrics |
+| `services/mqtt_status.py` | connection flag MQTT writes and the send service reads (no reference cycle) |
 | `services/stats.py` | pure aggregation of the send history (per day, per type) |
 | `services/housekeeping.py` | daily retention pruning |
 | `wiring.py` | `build_services()`: picks MySQL or memory for each store, creates the services and links them; `main.py`'s lifespan only starts and stops them |

@@ -13,6 +13,8 @@ from src.gsm7 import segments_used, transliterate, truncate_to_segments
 from src.models.schemas import Priority, SendHistoryEntry, SendSMSRequest
 from src.phone import normalize_phone
 from src.services.idempotency import IdempotencyCache, IdempotencyConflict, fingerprint  # noqa: F401
+from src.services.inbox import InboxService
+from src.services.mqtt_status import MQTTStatus
 from src.services.outbox import Outbox, OutboxStore
 from src.services.stats import classify, daily_stats
 from src.services.teltonika import TeltonikaClient
@@ -88,12 +90,15 @@ class SMSService:
     def __init__(self, client: TeltonikaClient, settings: Settings,
                  history_store: SendHistoryStore | None = None,
                  outbox_store: OutboxStore | None = None,
-                 idempotency: IdempotencyCache | None = None):
+                 idempotency: IdempotencyCache | None = None,
+                 inbox: InboxService | None = None,
+                 mqtt_status: MQTTStatus | None = None):
         self.client = client
         self.settings = settings
         self.idempotency = idempotency
-        self.inbox = None  # InboxService, set by wiring.build_services (archive API + metrics)
-        self.mqtt = None   # MQTTService, set by wiring.build_services (connection state)
+        self.inbox = inbox  # archive API + inbox metrics; None = inbox not running
+        # Written by MQTTService; a fresh one reads "not connected".
+        self.mqtt_status = mqtt_status or MQTTStatus()
 
         # Rate limiting — normal traffic and critical traffic have
         # separate windows. Critical bypasses the normal limits but
@@ -323,7 +328,7 @@ class SMSService:
         inbox = self.inbox.metrics() if self.inbox is not None else {}
         return {
             "mqtt": {"enabled": bool(s.mqtt_broker.strip()),
-                     "connected": bool(self.mqtt and self.mqtt.connected),
+                     "connected": self.mqtt_status.connected,
                      "broker": f"{s.mqtt_broker}:{s.mqtt_port}" if s.mqtt_broker.strip() else ""},
             "webhook": {"enabled": bool(s.sms_inbox_webhook_url),
                         "forwarded": inbox.get("inbox_forwarded", 0),
@@ -377,7 +382,7 @@ class SMSService:
             "segments_sent": self.counters["segments"]
             + (self.outbox.counters["segments"] if self.outbox is not None else 0),
             "idempotent_replays": self.counters["replays"],
-            "mqtt_connected": int(bool(self.mqtt and self.mqtt.connected)),
+            "mqtt_connected": int(self.mqtt_status.connected),
         }
         b = self.budget()
         out.update({"rate_normal_minute_used": b["normal_minute"]["used"],

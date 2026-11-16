@@ -17,6 +17,7 @@ from src.services.housekeeping import Housekeeping
 from src.services.idempotency import IdempotencyCache
 from src.services.inbox import InboxService
 from src.services.mqtt import MQTTService
+from src.services.mqtt_status import MQTTStatus
 from src.services.sms_service import SMSService
 from src.services.teltonika import TeltonikaClient
 from src.storage import (
@@ -135,15 +136,14 @@ async def build_services(settings: Settings, stores: Stores | None = None) -> Se
         stores = open_stores(settings)
     idempotency = IdempotencyCache(stores.idempotency, settings.sms_idempotency_ttl_seconds)
     await idempotency.load()
-    sms_service = SMSService(teltonika, settings, history_store=stores.history,
-                             outbox_store=stores.outbox, idempotency=idempotency)
-    mqtt_service = MQTTService(sms_service, settings)
     inbox = InboxService(teltonika, stores.inbox, settings)
-    # Cross-links: inbound SMS go out over MQTT; the send service reports
-    # inbox and MQTT state in /api/sms/status.
-    inbox.add_publisher(mqtt_service.publish_inbox)
-    sms_service.inbox = inbox
-    sms_service.mqtt = mqtt_service
+    # MQTT needs the send service; the send service only reads MQTT's
+    # connection state, so they share an MQTTStatus instead of a cycle.
+    sms_service = SMSService(teltonika, settings, history_store=stores.history,
+                             outbox_store=stores.outbox, idempotency=idempotency,
+                             inbox=inbox, mqtt_status=MQTTStatus())
+    mqtt_service = MQTTService(sms_service, settings)
+    inbox.add_publisher(mqtt_service.publish_inbox)  # inbound SMS go out over MQTT
     housekeeping = Housekeeping(settings, stores.history,
                                 stores.outbox if sms_service.outbox is not None else None,
                                 idempotency, stores.inbox)
