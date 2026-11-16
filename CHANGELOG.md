@@ -6,6 +6,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.14.2] — 2026-11-16
+
 ### Added
 - Dockerfile `test` stage with the dev dependencies baked in:
   `docker build --target test -t kurier-test .` once, then
