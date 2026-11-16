@@ -6,6 +6,13 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- Dockerfile `test` stage with the dev dependencies baked in:
+  `docker build --target test -t kurier-test .` once, then
+  `docker run --rm -v "$PWD":/app kurier-test` runs the suite against the
+  mounted checkout. The runtime image is unchanged and stays the default
+  build; CI checks both.
+
 ### Changed
 - Internal layout, no behaviour change: `src/storage.py` is now the
   package `src/storage/` with one module per table family (`history`,

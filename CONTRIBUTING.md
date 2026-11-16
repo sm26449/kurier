@@ -16,12 +16,11 @@ pip install -r requirements.txt -r requirements-dev.txt
 pytest -q
 ```
 
-Or without a local Python, in the image itself:
+Or without a local Python, in the Dockerfile's `test` stage:
 
 ```bash
-docker build -t kurier-dev .
-docker run --rm -u 0 -v "$PWD":/app -w /app kurier-dev \
-  sh -c "pip install -q -r requirements-dev.txt && pytest -q"
+docker build --target test -t kurier-test .   # rebuild when requirements change
+docker run --rm -v "$PWD":/app kurier-test
 ```
 
 Tests use fakes for the router (`httpx.MockTransport`), MQTT and storage;

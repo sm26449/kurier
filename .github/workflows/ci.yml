@@ -85,3 +85,11 @@ jobs:
         run: |
           docker build -t kurier:ci .
           test "$(docker run --rm kurier:ci id -u)" = "10001"
+          # dev dependencies stay out of the runtime image
+          if docker run --rm kurier:ci python -c "import pytest" 2>/dev/null; then
+            echo "pytest found in the runtime image"; exit 1
+          fi
+      - name: Test stage runs the suite
+        run: |
+          docker build --target test -t kurier:test .
+          docker run --rm -v "$PWD":/app kurier:test

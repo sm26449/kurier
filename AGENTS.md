@@ -60,13 +60,14 @@ they are `None` in unit tests that build an `SMSService` directly.
 ## Tests
 
 ```sh
-docker build -t kurier-dev .
-docker run --rm -u 0 -v "$PWD":/app -w /app kurier-dev \
-  sh -c "pip install -q -r requirements-dev.txt && pytest -q -p no:cacheprovider"
+docker build --target test -t kurier-test .     # once; again only when requirements change
+docker run --rm -v "$PWD":/app kurier-test      # full suite, ~3 s
+docker run --rm -v "$PWD":/app kurier-test pytest -q tests/test_x.py -k name
 ```
 
-No local Python needed. Narrow with `pytest -q tests/test_x.py -k name`
-while iterating; run the full suite (~3 s) before you finish.
+No local Python needed. The checkout is mounted, so code changes need no
+rebuild, and nothing is written into it. Narrow the run while iterating;
+run the full suite before you finish.
 
 | File | Layer | Fakes / fixtures |
 |---|---|---|
