@@ -22,7 +22,9 @@ adheres to [Semantic Versioning](https://semver.org/).
   by `tests/test_wiring.py`); the startup log lines are unchanged.
   The send service now gets the inbox and MQTT's connection state
   (`MQTTStatus`) at construction instead of having them attached
-  afterwards.
+  afterwards. Rate and dedup limits moved to `services/send_limits.py`
+  and the history with its statistics and search to
+  `services/send_history.py`; `sms_service.py` keeps the send path.
 
 ## [1.14.1] — 2026-11-15
 

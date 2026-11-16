@@ -23,14 +23,14 @@ NUMBER = "+40712345678"
 async def test_budget_counts_windows_separately():
     svc, _ = make_service(rate_minute=2)
     await svc.send(number=NUMBER, message="a")
-    b = svc.budget()
+    b = svc.limits.budget()
     assert b["normal_minute"] == {"used": 1, "limit": 2, "frees_in_seconds": 0,
                                   "oldest_leaves_in_seconds": b["normal_minute"]["oldest_leaves_in_seconds"]}
     await svc.send(number=NUMBER, message="b")
-    full = svc.budget()["normal_minute"]
+    full = svc.limits.budget()["normal_minute"]
     assert full["used"] == 2 and 1 <= full["frees_in_seconds"] <= 61
     await svc.send(number=NUMBER, message="c", priority=Priority.critical)
-    b = svc.budget()
+    b = svc.limits.budget()
     assert b["critical_hour"]["used"] == 1 and b["normal_hour"]["used"] == 2
     assert b["dedup_active"] == 2
 
@@ -99,7 +99,7 @@ def test_daily_stats_local_days_types_and_unknown_segments():
 async def test_service_stats_from_memory_is_partial():
     svc, _ = make_service()
     await svc.send(number=NUMBER, message="a", options=SendOptions(type="x"))
-    s = await svc.stats(7)
+    s = await svc.history.stats(7)
     assert s["partial"] is True and s["totals"]["sent"] == 1 and len(s["per_day"]) == 7
 
 
@@ -113,12 +113,12 @@ async def test_search_in_memory_filters():
     await svc.send(number=NUMBER, message="SOC low", options=SendOptions(type="soc"))
     with pytest.raises(Exception):
         await svc.send(number=NUMBER, message="Container again", options=SendOptions(type="cd"))
-    assert [e.message for e in await svc.search(q="container")] == ["Container again",
+    assert [e.message for e in await svc.history.search(q="container")] == ["Container again",
                                                                     "Container down"]
-    assert [e.message for e in await svc.search(status="blocked")] == ["Container again"]
-    assert [e.message for e in await svc.search(type="soc")] == ["SOC low"]
+    assert [e.message for e in await svc.history.search(status="blocked")] == ["Container again"]
+    assert [e.message for e in await svc.history.search(type="soc")] == ["SOC low"]
     future = datetime.now(timezone.utc) + timedelta(hours=1)
-    assert await svc.search(since=future) == []
+    assert await svc.history.search(since=future) == []
 
 
 # ── HTTP ──────────────────────────────────────────────────────

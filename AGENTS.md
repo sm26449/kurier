@@ -34,7 +34,8 @@ only what the task needs:
 | To understand… | Open |
 |---|---|
 | how the process is assembled (which store, which service, who links to whom) | `src/wiring.py` → `open_stores()`, `build_services()`; `src/main.py` → `lifespan` only starts/stops |
-| one outbound SMS | `routers/sms.py::send_sms` → `services/sms_service.py::SMSService.send` → `services/teltonika.py::TeltonikaClient.send_sms`; router down → `services/outbox.py` |
+| one outbound SMS | `routers/sms.py::send_sms` → `services/sms_service.py::SMSService.send` (limits: `services/send_limits.py::SendLimits.reserve`) → `services/teltonika.py::TeltonikaClient.send_sms`; router down → `services/outbox.py` |
+| history, stats, search, budget | `services/send_history.py::SendHistory` (`sms.history`), `services/send_limits.py::SendLimits.budget` (`sms.limits`) |
 | one inbound SMS | `services/inbox.py::InboxService` (poll → archive → MQTT / webhook → delete from modem) |
 | a table | `migrations/NNN_*.sql` + `src/storage/<history|outbox|idempotency|inbox>.py` (MySQL and in-memory store side by side); `src/storage/db.py` = connection + column probes |
 | a setting | `src/config.py` + its comment in `.env.example` |
@@ -112,8 +113,8 @@ a throwaway `mysql:8.4` (docs/OPERATIONS.md).
 - Optional request metadata **never causes a 422**: sanitize or clamp
   (`SendSMSRequest._normalize`). Only an empty message or an idempotency
   conflict is refused.
-- Rate limit + dedup are **reserved in one synchronous step** — no
-  `await` between check and reserve. `critical` has its own hourly budget
+- Rate limit + dedup are **reserved in one synchronous step**
+  (`SendLimits.reserve`) — no `await` between check and reserve. `critical` has its own hourly budget
   and no dedup.
 - Router answers that start with `ERROR` are not values: one retry, then
   the last good value. Status comes from `gsmctl -E`.

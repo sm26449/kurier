@@ -176,14 +176,14 @@ async def metrics(sms: SMS, _: None = Auth) -> dict[str, int | float]:
 @router.get("/budget")
 async def budget(sms: SMS, _: None = Auth) -> dict:
     """Live rate-limit usage per window, dedup window, and connection state."""
-    return {**sms.budget(), "connections": sms.connections()}
+    return {**sms.limits.budget(), "connections": sms.connections()}
 
 
 @router.get("/stats")
 async def stats(sms: SMS, days: Annotated[int, Query(ge=1, le=90)] = 30, _: None = Auth) -> dict:
     """Per-day outcomes (sent / blocked / duplicate / failed / queued) and billed
     segments, plus per-type totals, over the last ``days`` local days."""
-    return await sms.stats(days)
+    return await sms.history.stats(days)
 
 
 @router.get("/history/search", response_model=list[SendHistoryEntry])
@@ -201,9 +201,9 @@ async def search_history(
     _: None = Auth,
 ):
     """Search the full send history (MySQL, ``SMS_HISTORY_RETENTION_DAYS``)."""
-    return await sms.search(q=q or None, type=type or None, source=source or None,
-                            status=status, priority=priority, since=since, until=until,
-                            limit=limit, offset=offset)
+    return await sms.history.search(q=q or None, type=type or None, source=source or None,
+                                    status=status, priority=priority, since=since,
+                                    until=until, limit=limit, offset=offset)
 
 
 @router.get("/history", response_model=list[SendHistoryEntry])

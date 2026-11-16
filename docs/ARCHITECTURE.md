@@ -23,7 +23,9 @@ to do that reliably. It never interprets message text.
 | Module | Responsibility |
 |---|---|
 | `routers/sms.py`, `routers/health.py` | HTTP API; status-code mapping; API-key check |
-| `services/sms_service.py` | send pipeline: options, text preparation, rate limits, dedup, history, budget, stats, search |
+| `services/sms_service.py` | send pipeline: options, text preparation, reserve → router or outbox, counters, status/metrics snapshot |
+| `services/send_limits.py` | rate windows (normal minute/hour, critical hour) and the dedup window, reserved in one step; `budget()` |
+| `services/send_history.py` | last 100 attempts in memory (+ `sms_log` write-through); `stats()`, `search()` |
 | `services/teltonika.py` | router client: REST login/send, ubus session + `gsmctl`, status from `gsmctl -E` |
 | `services/outbox.py` | durable queue for SMS the router didn't take; backoff worker; per-message TTL |
 | `services/inbox.py` | inbound transport: poll → archive → MQTT/webhook → delete from modem |
