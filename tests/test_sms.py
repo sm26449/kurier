@@ -1,7 +1,5 @@
 """Basic tests for SMS service logic."""
 
-import time
-
 import pytest
 
 from src.config import Settings

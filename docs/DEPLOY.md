@@ -24,7 +24,7 @@ You still need the checkout — the compose files, `migrations/` and
 `scripts/` come from it — but nothing is built:
 
 ```
-KURIER_IMAGE=ghcr.io/sm26449/kurier:1.13.0     # in .env; pin a version
+KURIER_IMAGE=ghcr.io/sm26449/kurier:<version>    # in .env; pin a version
 ```
 ```bash
 docker compose pull kurier && docker compose up -d --no-build
@@ -118,8 +118,8 @@ Keep the source checkout clean and run Kurier from its own directory —
 ```bash
 mkdir -p /srv/kurier/backups
 cp .env.example /srv/kurier/.env && chmod 600 /srv/kurier/.env   # edit it
-scripts/deploy.sh 1.13.0 --runtime-dir=/srv/kurier --dry-run
-scripts/deploy.sh 1.13.0 --runtime-dir=/srv/kurier
+scripts/deploy.sh <version> --runtime-dir=/srv/kurier --dry-run
+scripts/deploy.sh <version> --runtime-dir=/srv/kurier
 ```
 
 [`scripts/deploy.sh`](../scripts/deploy.sh) does: preflight (health,

@@ -6,8 +6,7 @@ from fastapi.testclient import TestClient
 
 from src.config import settings
 from src.routers import health, sms
-from src.services.sms_service import SMSService
-from tests.test_sms import FakeTeltonikaClient, make_service
+from tests.test_sms import make_service
 
 
 @pytest.fixture
