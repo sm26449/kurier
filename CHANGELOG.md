@@ -6,6 +6,20 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- **Watchdogs** ([ADR-0001](docs/adr/0001-watchdogs.md)): a service checks
+  in with `POST /api/watchdogs/{name}/ping` (`timeout_sec`, optional
+  `status: fail` + `detail`, `to`); no check-in within its timeout, or a
+  reported failure, sends a critical SMS, and an SMS again when it is back.
+  At most one down SMS per watchdog every 30 min; timers restart with
+  Kurier. The answer carries Kurier's modem state, so the caller watches
+  Kurier with the same request. `DELETE /api/watchdogs/{name}` forgets one,
+  `GET /api/watchdogs` lists them, and the status page shows them.
+  New settings `SMS_WATCHDOG_TO`, `SMS_WATCHDOG_MAX`; new table
+  `sms_watchdogs` (migration 005, applied by `scripts/deploy.sh`; without
+  it the watchdogs are kept in memory).
+- `docs/adr/`: architecture decision records.
+
 ## [1.14.2] — 2026-11-16
 
 ### Added

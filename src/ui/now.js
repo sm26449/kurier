@@ -115,6 +115,25 @@ function renderCounts(m) {
       el("dd", { class: alert ? "alert" : "", text: value === undefined ? "—" : nf.format(value) }))));
 }
 
+// ── Watchdogs ────────────────────────────────────────────────
+function renderWatchdogs(items) {
+  $("watchdogs-section").hidden = !items.length;
+  $("watchdogs").replaceChildren(...items.map((w) => {
+    const down = w.state === "down";
+    return el("li", {},
+      el("i", { class: `dot ${down ? "bad" : "ok"}` }),
+      el("strong", { text: w.name }),
+      el("span", { class: `state${down ? " bad" : ""}`, text: t(down ? "wd.down" : "wd.up") }),
+      el("div", { class: "meta" },
+        down ? el("span", {}, `${t("wd.downSince")} `, timeEl(w.down_since)) : null,
+        down ? el("span", { class: "tag bad",
+                            text: w.down_reason === "fail" ? t("wd.failed", { detail: w.detail || "—" }) : t("wd.silent") }) : null,
+        down ? el("span", { text: t(w.down_sms_sent ? "wd.smsSent" : "wd.smsHeld") }) : null,
+        el("span", {}, `${t("wd.lastPing")} `, timeEl(w.last_ping)),
+        el("span", { text: t("wd.timeout", { d: duration(w.timeout_sec) }) })));
+  }));
+}
+
 // ── Outbox (with cancel) ─────────────────────────────────────
 function renderOutbox(items) {
   $("outbox-section").hidden = !items.length;
@@ -267,7 +286,7 @@ async function refresh() {
     health: api("/api/health"), root: api("/"), status: api("/api/sms/status"),
     metrics: api("/api/sms/metrics"), budget: api("/api/sms/budget"),
     history: api("/api/sms/history?limit=100"), outbox: api("/api/sms/outbox"),
-    inbox: api("/api/sms/inbox?limit=100"),
+    inbox: api("/api/sms/inbox?limit=100"), watchdogs: api("/api/watchdogs"),
   };
   const names = Object.keys(calls);
   const settled = await Promise.allSettled(Object.values(calls));
@@ -286,6 +305,7 @@ async function refresh() {
   renderPath(ok("health"), ok("status") || {}, metrics, !authFailed);
   if (ok("budget")) renderBudget(ok("budget"));
   if (ok("metrics")) renderCounts(metrics);
+  if (ok("watchdogs")) renderWatchdogs(ok("watchdogs"));
   if (ok("outbox")) renderOutbox(ok("outbox"));
   if (ok("history")) renderSent(ok("history"));
   if (ok("inbox")) renderReceived(ok("inbox").messages || []);

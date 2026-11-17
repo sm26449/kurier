@@ -105,7 +105,10 @@ function attempts(n) { return t("attempts", { n }); }
 function duration(sec) {
   if (sec < 60) return `${sec} s`;
   const m = Math.ceil(sec / 60);
-  return m < 60 ? `${m} min` : `${Math.floor(m / 60)} h ${m % 60} min`;
+  if (m < 60) return `${m} min`;
+  if (m < 1440) return m % 60 ? `${Math.floor(m / 60)} h ${m % 60} min` : `${m / 60} h`;
+  const h = Math.round(m / 60);
+  return h % 24 ? `${Math.floor(h / 24)} d ${h % 24} h` : `${h / 24} d`;
 }
 function localDay(iso) { const [y, m, d] = iso.split("-").map(Number); return new Date(y, m - 1, d); }
 

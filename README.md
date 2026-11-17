@@ -36,6 +36,10 @@ the SMS path itself is broken.
   to MQTT and to an optional webhook (e.g. Klopot's `sms_inbox` input),
   then deleted from the SIM. Flags `authorized` (known sender) and
   `stale` (too old to act on) let consumers decide safely.
+- **Watch other services** — a service checks in with one request
+  (`POST /api/watchdogs/{name}/ping`); silence past its timeout, or a
+  reported failure, sends an SMS. The SMS path that still works when the
+  internet or your notification service doesn't.
 - **Observe** — a status page (`/ui`): the SMS path hop by hop (gateway →
   router → SIM → network → queue), the live sending budget, a per-day
   chart of what was sent and blocked, the noisiest alert types and full
@@ -125,6 +129,7 @@ MQTT topics and the inbound payload: [docs/API.md](docs/API.md).
 | [docs/TELTONIKA.md](docs/TELTONIKA.md) | router prerequisites and quirks |
 | [docs/OPERATIONS.md](docs/OPERATIONS.md) | status page, metrics, monitoring, troubleshooting |
 | [docs/INTEGRATION_KLOPOT.md](docs/INTEGRATION_KLOPOT.md) | wiring Kurier to the Klopot notification service |
+| [docs/adr/](docs/adr/README.md) | architecture decisions (ADR-0001: watchdogs) |
 | [SECURITY.md](SECURITY.md) | reporting and hardening |
 | [CHANGELOG.md](CHANGELOG.md) | release history |
 

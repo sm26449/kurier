@@ -37,7 +37,8 @@ only what the task needs:
 | one outbound SMS | `routers/sms.py::send_sms` → `services/sms_service.py::SMSService.send` (limits: `services/send_limits.py::SendLimits.reserve`) → `services/teltonika.py::TeltonikaClient.send_sms`; router down → `services/outbox.py` |
 | history, stats, search, budget | `services/send_history.py::SendHistory` (`sms.history`), `services/send_limits.py::SendLimits.budget` (`sms.limits`) |
 | one inbound SMS | `services/inbox.py::InboxService` (poll → archive → MQTT / webhook → delete from modem) |
-| a table | `migrations/NNN_*.sql` + `src/storage/<history|outbox|idempotency|inbox>.py` (MySQL and in-memory store side by side); `src/storage/db.py` = connection + column probes |
+| watchdogs (a service checks in, silence → SMS) | `routers/watchdogs.py` → `services/watchdogs.py::WatchdogService` (`ping`, `check_once`); spec [docs/adr/0001-watchdogs.md](docs/adr/0001-watchdogs.md) — the ping contract is used by Klopot as is |
+| a table | `migrations/NNN_*.sql` + `src/storage/<history|outbox|idempotency|inbox|watchdogs>.py` (MySQL and in-memory store side by side); `src/storage/db.py` = connection + column probes |
 | a setting | `src/config.py` + its comment in `.env.example` |
 | the HTTP contract | [docs/API.md](docs/API.md) (status codes, fields, MQTT topics) |
 | the router's quirks | [docs/TELTONIKA.md](docs/TELTONIKA.md) |
@@ -52,6 +53,7 @@ Everything else:
 | Errors | `src/errors.py` (`describe_error` for router/HTTP failures) |
 | Deploy | `compose.yaml` + overlays (`compose.mysql.yaml`, `compose.backup.yaml`, `compose.proxy.yaml`, `compose.traefik.yaml`), `deploy/traefik/`, `install.sh`, `scripts/deploy.sh`, `scripts/migrate.sh`, `scripts/backup.sh` |
 | CI | `.github/workflows/ci.yml` (tests, `pip-audit`, compose overlays, shellcheck, installer, image), `release.yml` (multi-arch image on a tag; build-only on PRs touching the image), `dependabot.yml` |
+| Decisions | `docs/adr/` (numbered ADRs; amend with a dated line, supersede with a new ADR) |
 | User docs | `docs/INSTALL.md`, `docs/INTEGRATIONS.md`, `docs/INTEGRATION_KLOPOT.md`, `docs/API.md`, `docs/DEPLOY.md`, `docs/TELTONIKA.md`, `docs/OPERATIONS.md`; brand rules `docs/brand/README.md` |
 
 Every link between services is a constructor argument, made in
@@ -84,6 +86,7 @@ run the full suite before you finish.
 | `test_observability.py` | metrics, MQTT publishing, housekeeping, async history | publish capture, `FakeHistory` |
 | `test_insights.py` | budget, connections, stats, search | — |
 | `test_wiring.py` | store choice and service links | no MySQL |
+| `test_watchdogs.py` | watchdog transitions, flapping limit, restart grace, ping contract, auth | fake `Clock`, `Modem` (status cache age) |
 | `test_ui.py` | CSP, assets, no HTML injection, EN/RO key parity | — |
 
 `conftest.py` only zeroes the router retry delay. SQL is checked against

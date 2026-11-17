@@ -9,7 +9,7 @@ from fastapi.staticfiles import StaticFiles
 
 from src import __version__
 from src.config import settings
-from src.routers import health, sms
+from src.routers import health, sms, watchdogs
 from src.wiring import build_services
 
 logging.basicConfig(
@@ -37,6 +37,7 @@ async def lifespan(app: FastAPI):
 
     app.dependency_overrides[sms.get_sms_service] = lambda: services.sms
     app.dependency_overrides[health.get_teltonika_client] = lambda: services.teltonika
+    app.dependency_overrides[watchdogs.get_watchdog_service] = lambda: services.watchdogs
     app.state.services = services
 
     await services.start()
@@ -57,6 +58,7 @@ app = FastAPI(
 
 app.include_router(sms.router)
 app.include_router(health.router)
+app.include_router(watchdogs.router)
 
 
 @app.get("/", include_in_schema=False)

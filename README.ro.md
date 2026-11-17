@@ -37,6 +37,10 @@ stricat.
   din Klopot), apoi șters de pe SIM. Marcajele `authorized` (expeditor
   cunoscut) și `stale` (prea vechi ca să acționezi pe el) îi lasă pe
   consumatori să decidă în siguranță.
+- **Supraveghează alte servicii** — un serviciu raportează cu o singură
+  cerere (`POST /api/watchdogs/{name}/ping`); dacă tace mai mult decât
+  timpul lui sau raportează o eroare, pleacă un SMS. Calea de alertă care
+  merge și când internetul sau serviciul de notificări nu merg.
 - **Se vede** — o pagină de status (`/ui`): drumul SMS-ului verigă cu verigă
   (gateway → router → SIM → rețea → coadă), bugetul de trimitere în timp
   real, un grafic pe zile cu ce s-a trimis și ce s-a blocat, alertele cele
@@ -113,6 +117,7 @@ Documentația detaliată e în engleză:
 [API](docs/API.md) · [arhitectură](docs/ARCHITECTURE.md) ·
 [deploy](docs/DEPLOY.md) · [router Teltonika](docs/TELTONIKA.md) ·
 [operare](docs/OPERATIONS.md) · [integrare Klopot](docs/INTEGRATION_KLOPOT.md) ·
+[decizii de arhitectură](docs/adr/README.md) ·
 [securitate](SECURITY.md) · [istoric versiuni](CHANGELOG.md).
 
 ## Securitate

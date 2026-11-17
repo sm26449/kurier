@@ -62,6 +62,12 @@ class Settings(BaseSettings):
     sms_outbox_poll_seconds: int = 30
     sms_outbox_max_backoff_seconds: int = 600
 
+    # Watchdogs (docs/adr/0001-watchdogs.md): services ping
+    # POST /api/watchdogs/{name}/ping; silence or status=fail sends an SMS.
+    # Recipients when a ping names none (comma-separated); empty = SMS_DEFAULT_RECIPIENTS.
+    sms_watchdog_to: str = ""
+    sms_watchdog_max: int = 100
+
     # Housekeeping (daily): drop old send history and finished outbox rows.
     # Daily mysqldump backups keep the long-term record.
     sms_history_retention_days: int = 90
@@ -99,6 +105,10 @@ class Settings(BaseSettings):
         if not self.sms_default_recipients:
             return []
         return [r.strip() for r in self.sms_default_recipients.split(",") if r.strip()]
+
+    @property
+    def watchdog_recipients_list(self) -> list[str]:
+        return [r.strip() for r in self.sms_watchdog_to.split(",") if r.strip()]
 
     model_config = {"env_file": ".env", "extra": "ignore"}
 

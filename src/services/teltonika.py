@@ -304,6 +304,12 @@ class TeltonikaClient:
         self._status_cache = (time.monotonic(), status)
         return dict(status)
 
+    def status_age_seconds(self) -> float | None:
+        """Seconds since the last status snapshot; None if there is none."""
+        if not self._status_cache:
+            return None
+        return time.monotonic() - self._status_cache[0]
+
     def cached_status(self) -> dict:
         """Last status snapshot (any age) without querying the router."""
         if not self._status_cache:

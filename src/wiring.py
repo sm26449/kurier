@@ -20,14 +20,17 @@ from src.services.mqtt import MQTTService
 from src.services.mqtt_status import MQTTStatus
 from src.services.sms_service import SMSService
 from src.services.teltonika import TeltonikaClient
+from src.services.watchdogs import WatchdogService
 from src.storage import (
     MemoryIdempotencyStore,
     MemoryInboxStore,
     MemoryOutboxStore,
+    MemoryWatchdogStore,
     MySQLConnection,
     MySQLIdempotencyStore,
     MySQLInboxStore,
     MySQLOutboxStore,
+    MySQLWatchdogStore,
     SendHistoryStore,
 )
 
@@ -44,6 +47,7 @@ class Stores:
     outbox: MySQLOutboxStore | MemoryOutboxStore
     idempotency: MySQLIdempotencyStore | MemoryIdempotencyStore
     inbox: MySQLInboxStore | MemoryInboxStore
+    watchdogs: MySQLWatchdogStore | MemoryWatchdogStore
 
 
 @dataclass
@@ -56,17 +60,20 @@ class Services:
     mqtt: MQTTService
     inbox: InboxService
     housekeeping: Housekeeping
+    watchdogs: WatchdogService
 
     async def start(self) -> None:
-        """Start the background tasks (outbox worker, MQTT, inbox poll, pruning)."""
+        """Start the background tasks (outbox worker, MQTT, inbox poll, pruning, watchdog checks)."""
         if self.sms.outbox is not None:
             await self.sms.outbox.start()
         await self.mqtt.start()
         await self.inbox.start()
         await self.housekeeping.start()
+        await self.watchdogs.start()
 
     async def stop(self) -> None:
         """Stop in reverse order, then close the router client and MySQL."""
+        await self.watchdogs.stop()
         await self.housekeeping.stop()
         await self.inbox.stop()
         await self.mqtt.stop()
@@ -94,7 +101,8 @@ def open_stores(settings: Settings) -> Stores:
     if not (settings.sms_history_enabled and settings.mysql_password):
         logger.info("MySQL persistence disabled (no MYSQL_PASSWORD set)")
         return Stores(db=None, history=None, outbox=MemoryOutboxStore(),
-                      idempotency=MemoryIdempotencyStore(), inbox=MemoryInboxStore())
+                      idempotency=MemoryIdempotencyStore(), inbox=MemoryInboxStore(),
+                      watchdogs=MemoryWatchdogStore())
     db = MySQLConnection(
         host=settings.mysql_host,
         port=settings.mysql_port,
@@ -118,6 +126,10 @@ def open_stores(settings: Settings) -> Stores:
             "inbox: MySQL table sms_inbox unavailable (%s) — in-memory archive, "
             "modem messages deleted only once delivered; apply "
             "migrations/004_sms_inbox.sql"),
+        watchdogs=_mysql_or_memory(
+            MySQLWatchdogStore(db), MemoryWatchdogStore(),
+            "watchdogs: MySQL table sms_watchdogs unavailable (%s) — kept in memory, "
+            "re-registered by their next ping; apply migrations/005_sms_watchdogs.sql"),
     )
 
 
@@ -147,5 +159,7 @@ async def build_services(settings: Settings, stores: Stores | None = None) -> Se
     housekeeping = Housekeeping(settings, stores.history,
                                 stores.outbox if sms_service.outbox is not None else None,
                                 idempotency, stores.inbox)
+    watchdogs = WatchdogService(sms_service, teltonika, stores.watchdogs, settings)
+    await watchdogs.load()
     return Services(teltonika=teltonika, stores=stores, sms=sms_service, mqtt=mqtt_service,
-                    inbox=inbox, housekeeping=housekeeping)
+                    inbox=inbox, housekeeping=housekeeping, watchdogs=watchdogs)

@@ -120,6 +120,71 @@ Archive: `GET /api/sms/inbox?limit=1..200`, `GET|DELETE /api/sms/inbox/{id}`
 (fields add `received_at`, `authorized`, `stale`, `published`, `forwarded`,
 `forward_error`). Kept `SMS_INBOX_RETENTION_DAYS` (90).
 
+## Watchdogs — `POST /api/watchdogs/{name}/ping`
+
+A dead man's switch for other services ([ADR-0001](adr/0001-watchdogs.md)):
+the service checks in regularly; silence, or a reported failure, sends an
+SMS. Kurier never probes anything itself. `X-API-Key` as for `/api/sms/*`.
+
+```
+POST /api/watchdogs/{name}/ping
+{"timeout_sec": 180, "status": "ok", "detail": "…", "to": ["+40…"]}
+```
+
+| Field | |
+|---|---|
+| `name` (path) | `[a-z0-9][a-z0-9._-]{0,63}`; otherwise `422` |
+| `timeout_sec` | required, 60 … 604800 (7 days): down when no ping arrives for this long |
+| `status` | `ok` (default) or `fail`: the service reports a problem, down at once |
+| `detail` | text for the `fail` SMS; whitespace collapsed, cut to 160 characters (never refused) |
+| `to` | optional, up to 10 numbers (normalized like `number` on send). Omitted or empty: `SMS_WATCHDOG_TO`, else `SMS_DEFAULT_RECIPIENTS` |
+
+**The ping is the registration**: the first one creates the watchdog,
+every one stores `timeout_sec` and `to` as sent. At most
+`SMS_WATCHDOG_MAX` (100) watchdogs: a ping for a new name beyond that is
+`409`. Other answers: `401` bad key, `422` invalid body or `to`.
+
+```json
+200 {"kurier": "ok",
+     "modem": {"registered": true, "signal_strength": -71, "sim_state": "inserted", "operator": "Orange RO"},
+     "watchdog": {"state": "up", "last_ping": "2026-11-17T12:00:00.123Z"}}
+```
+
+`modem` comes from Kurier's status cache — a ping never waits for the
+router. While watchdogs exist, the cache is kept at most 60 s old. Once it
+is older than 3 min (router unreachable) `registered` is `false` and the
+other fields are `null`. `registered` = the modem reports an operator and
+a signal.
+
+States, checked every 15 s:
+
+| Event | Transition | SMS (priority `critical`, `source=kurier`) |
+|---|---|---|
+| no ping for `timeout_sec` | up → down | `⚠ {name}: no check-in since {local time}` (`type=watchdog_down`) |
+| ping with `status: fail` | up → down at once | `⚠ {name}: {detail}` (`type=watchdog_down`) |
+| `ok` ping while down | down → up | `✅ {name} is back` (`type=watchdog_up`), only if the down SMS went out |
+
+- At most **one down SMS per watchdog every 30 min**. An outage that
+  starts inside that window gets its SMS when the window ends, if still
+  down; its recovery is then announced as usual.
+- After a Kurier restart every timer counts **from the restart**; a
+  watchdog that was down stays down without a second SMS.
+- The SMS go through the normal send path: outbox, critical budget,
+  history (search `type=watchdog_down`).
+
+`DELETE /api/watchdogs/{name}` — forget it (planned stop, maintenance), no
+alert: `204`, or `404` if unknown. A later ping registers it again.
+
+`GET /api/watchdogs` — every watchdog: `name`, `state`, `timeout_sec`,
+`last_ping`, `last_status`, `detail`, `down_since`, `down_reason`
+(`timeout` | `fail`), `down_sms_sent`, `recipients`, `created_at`.
+
+```bash
+# a nightly job: SMS if it hasn't succeeded for 25 h
+curl -fsS -X POST -H "X-API-Key: $SMS_API_KEY" -H "Content-Type: application/json" \
+  -d '{"timeout_sec": 90000}' http://kurier:5080/api/watchdogs/backup-nightly/ping
+```
+
 ## Health — `GET /api/health`
 
 Always `200` while the process runs; state in the body. Consumers (Klopot

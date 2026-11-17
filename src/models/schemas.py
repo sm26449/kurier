@@ -1,8 +1,9 @@
 import re
 from datetime import datetime
 from enum import Enum
+from typing import Literal
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class Priority(str, Enum):
@@ -189,3 +190,67 @@ class OutboxEntry(BaseModel):
 class RateLimitError(BaseModel):
     detail: str
     retry_after_seconds: int | None = None
+
+
+# ── Watchdogs (docs/adr/0001-watchdogs.md) ───────────────────
+
+WATCHDOG_NAME = r"^[a-z0-9][a-z0-9._-]{0,63}$"
+WATCHDOG_DETAIL_MAX = 160
+
+
+class WatchdogPing(BaseModel):
+    """Check-in. The ping is the registration: every ping stores its settings."""
+
+    timeout_sec: int = Field(..., ge=60, le=7 * 86400,
+                             description="Down when no ping arrives for this long (60 s … 7 days)")
+    status: Literal["ok", "fail"] = Field(
+        "ok", description="`fail` = the service reports a problem: down at once, SMS with `detail`")
+    detail: str | None = Field(None, description=f"Shown in the SMS; cut to {WATCHDOG_DETAIL_MAX} characters")
+    to: list[str] | None = Field(
+        None, max_length=10,
+        description="Recipients (E.164); omitted or empty = SMS_WATCHDOG_TO, else SMS_DEFAULT_RECIPIENTS")
+
+    @field_validator("status", mode="before")
+    @classmethod
+    def _status_lower(cls, v):
+        return v.strip().lower() if isinstance(v, str) else v
+
+    @field_validator("detail", mode="before")
+    @classmethod
+    def _detail_cut(cls, v):
+        if v is None:
+            return None
+        text = " ".join(str(v).split())[:WATCHDOG_DETAIL_MAX]
+        return text or None
+
+
+class WatchdogModem(BaseModel):
+    registered: bool
+    signal_strength: int | None = None
+    sim_state: str | None = None
+    operator: str | None = None
+
+
+class WatchdogBrief(BaseModel):
+    state: Literal["up", "down"]
+    last_ping: datetime
+
+
+class WatchdogPingResponse(BaseModel):
+    kurier: Literal["ok"] = "ok"
+    modem: WatchdogModem
+    watchdog: WatchdogBrief
+
+
+class WatchdogInfo(BaseModel):
+    name: str
+    state: Literal["up", "down"]
+    timeout_sec: int
+    last_ping: datetime
+    last_status: Literal["ok", "fail"]
+    detail: str | None = None
+    down_since: datetime | None = None
+    down_reason: Literal["timeout", "fail"] | None = None
+    down_sms_sent: bool = False
+    recipients: list[str] = []
+    created_at: datetime

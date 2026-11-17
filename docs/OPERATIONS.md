@@ -4,7 +4,7 @@
 
 | Tab | Shows |
 |---|---|
-| **Now** | the SMS path hop by hop (gateway → router → SIM → network → queue) with a one-line verdict; the live sending budget per window and when a slot frees; MQTT / webhook / storage state; counters since start; the outbox with each message's last error (cancel button); sent and received SMS as a thread (repeats grouped) |
+| **Now** | the SMS path hop by hop (gateway → router → SIM → network → queue) with a one-line verdict; the live sending budget per window and when a slot frees; MQTT / webhook / storage state; counters since start; the watchdogs with their state, last check-in and timeout; the outbox with each message's last error (cancel button); sent and received SMS as a thread (repeats grouped) |
 | **Statistics** | SMS per local day (sent vs blocked/failed) for 7/30/90 days, with a table view; the alert types that send the most, with billed segments |
 | **Search** | the full history (`SMS_HISTORY_RETENTION_DAYS`) by text/number, outcome, type, critical only, date range |
 
@@ -23,6 +23,7 @@ language and can be switched at the top right (the choice is remembered).
 | MQTT `sms-gateway/status` (retained, on connect + every 5 min) | signal, operator, network, band, temperature | modem condition |
 | MQTT `sms-gateway/metrics` (retained, every 60 s) / `GET /api/sms/metrics` | flat numbers | see below |
 | `GET /api/sms/budget` | per window: used, limit, frees in | how close a burst is to blocking |
+| `GET /api/watchdogs` | per watchdog: `state`, `last_ping`, `down_reason`, `down_sms_sent` | which services stopped checking in |
 
 Metrics (counters since the last start): `sent`, `failed`, `queued`,
 `blocked_rate_limit`, `blocked_duplicate`, `segments_sent`,
@@ -66,6 +67,24 @@ Counters reset on restart — graph them with `non_negative_difference()`.
 | Every `/api/sms/*` call answers `503 … SMS_API_KEY is not set` | no key in `.env` → set `SMS_API_KEY`, `docker compose up -d` |
 | Status page says "MQTT not configured" | `MQTT_BROKER` is empty — fine if you only use REST; set it to enable MQTT |
 | Status page: "The key you entered … isn't accepted" | wrong key; paste the `SMS_API_KEY` value (or the whole `.env` line) |
+
+## Watchdogs
+
+Services that ping `POST /api/watchdogs/{name}/ping` ([API](API.md#watchdogs--post-apiwatchdogsnameping),
+[ADR-0001](adr/0001-watchdogs.md)) get an SMS when they go quiet or report
+a failure. Operating them:
+
+- **Planned stop** of a watched service: `DELETE /api/watchdogs/{name}`
+  first (it re-registers with its next ping), or expect the SMS.
+- **Kurier restart**: timers restart too, so nothing alerts for
+  `timeout_sec` after a restart; a watchdog already down stays down
+  without a second SMS.
+- **No SMS for an outage**: at most one down SMS per watchdog every
+  30 min, sent through the normal path — check the history
+  (`type=watchdog_down`), the critical budget and that `SMS_WATCHDOG_TO` or
+  `SMS_DEFAULT_RECIPIENTS` is set (the log says `SMS to … not sent`).
+- **Storage**: `sms_watchdogs` (migration 005). Without it the watchdogs
+  live in memory and re-register with their next ping after a restart.
 
 ## Housekeeping
 

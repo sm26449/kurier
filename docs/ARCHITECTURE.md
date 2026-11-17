@@ -14,6 +14,7 @@ to do that reliably. It never interprets message text.
  MQTT ◀───────│ mqtt.publish_inbox ◀─ InboxService ◀── poll every 20 s ─────────┼─── router
  webhook ◀────│                        (archive → deliver → delete from SIM)    │
               │ Housekeeping (daily prune)        storage/ ────────────────────┼──▶ MySQL
+ pings ──────▶│ routers/watchdogs.py ─▶ WatchdogService (15 s) ─▶ SMSService   │
               │ /ui (static) · /api/health · /api/sms/{status,metrics,…}       │
               └────────────────────────────────────────────────────────────────┘
 ```
@@ -22,7 +23,7 @@ to do that reliably. It never interprets message text.
 
 | Module | Responsibility |
 |---|---|
-| `routers/sms.py`, `routers/health.py` | HTTP API; status-code mapping; API-key check |
+| `routers/sms.py`, `routers/health.py`, `routers/watchdogs.py` | HTTP API; status-code mapping; API-key check |
 | `services/sms_service.py` | send pipeline: options, text preparation, reserve → router or outbox, counters, status/metrics snapshot |
 | `services/send_limits.py` | rate windows (normal minute/hour, critical hour) and the dedup window, reserved in one step; `budget()` |
 | `services/send_history.py` | last 100 attempts in memory (+ `sms_log` write-through); `stats()`, `search()` |
@@ -34,8 +35,9 @@ to do that reliably. It never interprets message text.
 | `services/mqtt_status.py` | connection flag MQTT writes and the send service reads (no reference cycle) |
 | `services/stats.py` | pure aggregation of the send history (per day, per type) |
 | `services/housekeeping.py` | daily retention pruning |
+| `services/watchdogs.py` | watchdogs ([ADR-0001](adr/0001-watchdogs.md)): ping = registration, 15 s check, down/up SMS through the send service, modem state for the ping answer |
 | `wiring.py` | `build_services()`: picks MySQL or memory for each store, creates the services and links them; `main.py`'s lifespan only starts and stops them |
-| `storage/` | one module per table family (`history`, `outbox`, `idempotency`, `inbox`), each with a MySQL and an in-memory store; `db.py`: connection, column probes |
+| `storage/` | one module per table family (`history`, `outbox`, `idempotency`, `inbox`, `watchdogs`), each with a MySQL and an in-memory store; `db.py`: connection, column probes |
 | `gsm7.py`, `phone.py` | GSM-7 transliteration/segment counting; E.164 normalization |
 | `ui/` | status page (static HTML/CSS/JS): `core.js` helpers, `now.js` tab Now, `insights.js` statistics + search, `app.js` wiring, `i18n.js` texts |
 

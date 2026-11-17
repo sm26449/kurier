@@ -6,6 +6,7 @@ store and an in-memory store of the same interface:
 - ``outbox`` — ``OutboxItem``, ``MySQLOutboxStore`` / ``MemoryOutboxStore`` (``sms_outbox``)
 - ``idempotency`` — ``MySQLIdempotencyStore`` / ``MemoryIdempotencyStore`` (``sms_idempotency``)
 - ``inbox`` — ``InboxRecord``, ``MySQLInboxStore`` / ``MemoryInboxStore`` (``sms_inbox``)
+- ``watchdogs`` — ``WatchdogRecord``, ``MySQLWatchdogStore`` / ``MemoryWatchdogStore`` (``sms_watchdogs``)
 
 Columns added by later migrations are probed at startup, so the code runs
 before and after a migration is applied. Everything is re-exported here:
@@ -16,16 +17,20 @@ from src.storage.history import SendHistoryStore
 from src.storage.idempotency import MemoryIdempotencyStore, MySQLIdempotencyStore
 from src.storage.inbox import InboxRecord, MemoryInboxStore, MySQLInboxStore
 from src.storage.outbox import MemoryOutboxStore, MySQLOutboxStore, OutboxItem
+from src.storage.watchdogs import MemoryWatchdogStore, MySQLWatchdogStore, WatchdogRecord
 
 __all__ = [
     "InboxRecord",
     "MemoryIdempotencyStore",
     "MemoryInboxStore",
     "MemoryOutboxStore",
+    "MemoryWatchdogStore",
     "MySQLConnection",
     "MySQLIdempotencyStore",
     "MySQLInboxStore",
     "MySQLOutboxStore",
+    "MySQLWatchdogStore",
     "OutboxItem",
     "SendHistoryStore",
+    "WatchdogRecord",
 ]

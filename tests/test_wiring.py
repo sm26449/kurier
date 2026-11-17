@@ -10,6 +10,7 @@ from src.storage import (
     MemoryIdempotencyStore,
     MemoryInboxStore,
     MemoryOutboxStore,
+    MemoryWatchdogStore,
 )
 from src.wiring import _mysql_or_memory, build_services, open_stores
 
@@ -31,6 +32,7 @@ def test_without_mysql_every_store_is_in_memory():
     assert isinstance(stores.outbox, MemoryOutboxStore)
     assert isinstance(stores.idempotency, MemoryIdempotencyStore)
     assert isinstance(stores.inbox, MemoryInboxStore)
+    assert isinstance(stores.watchdogs, MemoryWatchdogStore)
 
 
 def test_history_disabled_skips_mysql_even_with_a_password():
@@ -69,6 +71,8 @@ async def test_services_are_cross_linked(router_down):
         assert services.mqtt.publish_inbox in services.inbox._publishers
         assert services.sms.outbox is not None
         assert services.housekeeping is not None
+        assert services.watchdogs.sms is services.sms
+        assert services.watchdogs.client is services.teltonika
     finally:
         await services.teltonika.close()
 

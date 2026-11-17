@@ -1,9 +1,10 @@
 # Integration with Klopot
 
 Klopot is a self-hosted notification service (rules → templates →
-channels). Kurier plugs into it in three places: Klopot **sends** SMS
-through Kurier, Klopot **receives** SMS through Kurier, and Klopot
-**monitors** the SMS path. Requires Klopot with the SMS `http` provider
+channels). Kurier plugs into it in four places: Klopot **sends** SMS
+through Kurier, Klopot **receives** SMS through Kurier, Klopot
+**monitors** the SMS path, and Kurier **watches Klopot** (an SMS when
+Klopot stops checking in). Requires Klopot with the SMS `http` provider
 and per-delivery idempotency keys (Klopot 1.0.1 builds from November 2026
 onward).
 
@@ -84,12 +85,39 @@ Rules (route to a channel that is **not** SMS, e.g. Telegram):
 `/api/health` always answers `200` — a non-2xx would make `http_poll`
 drop the body and the "modem down" rule would never see the value.
 
+## 4. Watchdog — Kurier watches Klopot
+
+Klopot cannot report its own outage through itself. Its `kurier` SMS
+provider pings a [watchdog](API.md#watchdogs--post-apiwatchdogsnameping)
+per channel (Klopot ADR-0003):
+
+```
+POST http://kurier:5080/api/watchdogs/klopot-<channel>/ping   every 60 s
+{"timeout_sec": 180, "status": "ok" | "fail", "detail": "<why, when fail>"}
+```
+
+- Klopot stops (process, container, rule engine) → after 180 s without a
+  ping Kurier sends `⚠ klopot-<channel>: no check-in since …` to
+  `SMS_WATCHDOG_TO` (else `SMS_DEFAULT_RECIPIENTS`); `✅ … is back` when
+  the pings resume.
+- Klopot reports itself unhealthy (`status: fail`) → the SMS carries its
+  `detail` at once.
+- The same answer carries Kurier's modem state (`modem.registered`,
+  `signal_strength`, `sim_state`, `operator`), so Klopot watches Kurier
+  with the same request (its `kurier_unreachable` / `kurier_modem_down`
+  alerts) — route those to a channel that is **not** SMS.
+- A planned Klopot stop: `DELETE /api/watchdogs/klopot-<channel>` first,
+  or expect the SMS.
+
 ## Verifying
 
 - Send: Klopot channel test → Kurier history shows `source=klopot`; a
   second identical delivery shows `replayed: true`.
 - Receive: send an SMS from an authorized phone → Klopot variable
   `sms.inbox.body` updates within ~20 s; a POST without the token → 401.
+- Watchdog: the status page (tab *Now*, *Watchdogs*) lists
+  `klopot-<channel>` as up with its last check-in; stop Klopot for 3 min →
+  the SMS arrives, start it → `✅ … is back`.
 - Klopot's activity log (Deliveries / Requests) records every request to
   and from Kurier with status and headers.
 

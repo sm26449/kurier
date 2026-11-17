@@ -111,6 +111,12 @@ button:not(.link) {
 .counts dd { margin: 0; font-size: 1.35rem; font-weight: 600; }
 .counts dd.alert { color: var(--bad); }
 
+.watchdogs { margin-top: 1.5rem; }
+.watchdogs li { padding: .4rem 0; border-top: 1px solid var(--line); }
+.watchdogs li:first-child { border-top: 0; }
+.watchdogs .state { margin-left: .4rem; }
+.watchdogs .state.bad { color: var(--bad); font-weight: 600; }
+
 .outbox { margin-top: 1.5rem; padding: 1rem; border: 1px solid var(--warn); border-radius: 10px; }
 .outbox li { padding: .4rem 0; border-top: 1px solid var(--line); }
 .outbox li:first-child { border-top: 0; }
