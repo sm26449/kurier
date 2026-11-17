@@ -4,11 +4,41 @@ Klopot is a self-hosted notification service (rules → templates →
 channels). Kurier plugs into it in four places: Klopot **sends** SMS
 through Kurier, Klopot **receives** SMS through Kurier, Klopot
 **monitors** the SMS path, and Kurier **watches Klopot** (an SMS when
-Klopot stops checking in). Requires Klopot with the SMS `http` provider
-and per-delivery idempotency keys (Klopot 1.0.1 builds from November 2026
-onward).
+Klopot stops checking in). Klopot 1.3.0 and later has a dedicated `kurier`
+SMS provider that does the first and the last; older Klopot (1.0.1 builds
+from November 2026 onward) uses its generic `http` provider and has no
+watchdog.
 
 ## 1. Sending — SMS channel
+
+### Klopot 1.3.0+: `provider: kurier`
+
+Channel `kind: sms`:
+
+```json
+{
+  "provider": "kurier",
+  "phone": "+40…",
+  "kurier_url": "http://kurier:5080",
+  "api_key_ref": "SMS_GATEWAY_API_KEY",
+  "dedup_key": "{type}:{rule_id}",
+  "ttl_seconds": 21600,
+  "max_segments": 3,
+  "watchdog": true,
+  "watchdog_timeout_sec": 180
+}
+```
+
+For every recipient (comma-separated in `phone`), Klopot posts to
+`{kurier_url}/api/sms/send`: `number`, `message`, `severity`,
+`idempotency_key` = delivery key + `:` + phone, `source: "klopot"`,
+`type`, and `dedup_key` (the template, rendered), `ttl_seconds` and
+`max_segments` when the channel sets them. Klopot counts any `2xx`
+(including `202`, queued in Kurier's outbox) and `409` (duplicate, already
+sent or queued) as delivered. Its channel health check reads `{kurier_url}/api/health`.
+The `watchdog*` fields belong to [section 4](#4-watchdog--kurier-watches-klopot).
+
+### Older Klopot: `provider: http`
 
 Channel `kind: sms`, `provider: http`:
 
@@ -26,7 +56,7 @@ Channel `kind: sms`, `provider: http`:
 }
 ```
 
-What each field buys:
+What each field buys (with either provider):
 
 | Field | Effect in Kurier |
 |---|---|
@@ -37,8 +67,9 @@ What each field buys:
 | `max_segments` | encoding-aware truncation instead of a fixed character cut |
 | `success_statuses: [409]` | a duplicate is already sent/queued — don't retry it |
 
-Every string goes through `| jsonstr`: the rendered body must be valid
-JSON or Klopot drops the SMS.
+With the `http` provider every string goes through `| jsonstr`: the
+rendered body must be valid JSON or Klopot drops the SMS. The `kurier`
+provider builds the JSON itself.
 
 Klopot's delivery side complements it: `429`/`503` are deferred by
 exactly `Retry-After` (no attempt spent, breaker untouched), other `4xx`
@@ -87,27 +118,34 @@ drop the body and the "modem down" rule would never see the value.
 
 ## 4. Watchdog — Kurier watches Klopot
 
-Klopot cannot report its own outage through itself. Its `kurier` SMS
-provider pings a [watchdog](API.md#watchdogs--post-apiwatchdogsnameping)
-per channel (Klopot ADR-0003):
+Klopot cannot report its own outage through itself. Every `kurier` SMS
+channel with `"watchdog": true` pings a
+[watchdog](API.md#watchdogs--post-apiwatchdogsnameping) of its own
+(Klopot ADR-0003, Klopot 1.3.0+):
 
 ```
 POST http://kurier:5080/api/watchdogs/klopot-<channel>/ping   every 60 s
 {"timeout_sec": 180, "status": "ok" | "fail", "detail": "<why, when fail>"}
 ```
 
-- Klopot stops (process, container, rule engine) → after 180 s without a
-  ping Kurier sends `⚠ klopot-<channel>: no check-in since …` to
-  `SMS_WATCHDOG_TO` (else `SMS_DEFAULT_RECIPIENTS`); `✅ … is back` when
-  the pings resume.
-- Klopot reports itself unhealthy (`status: fail`) → the SMS carries its
-  `detail` at once.
+- `<channel>` is the channel name in Kurier's alphabet (lower case, other
+  characters → `-`), e.g. `klopot-sms_main`. `timeout_sec` is the
+  channel's `watchdog_timeout_sec` (default 180).
+- Klopot stops (process, container) → after `timeout_sec` without a ping
+  Kurier sends `⚠ klopot-<channel>: no check-in since …`; `✅ … is back`
+  when the pings resume. Recipients: the channel's `watchdog_to` (sent as
+  `to` on every ping) if set, else Kurier's `SMS_WATCHDOG_TO`, else
+  `SMS_DEFAULT_RECIPIENTS`.
+- Klopot alive but not working (an essential component down, the rule
+  engine stuck, its outbox not draining) → it pings `status: fail` and the
+  SMS carries the reason at once.
 - The same answer carries Kurier's modem state (`modem.registered`,
   `signal_strength`, `sim_state`, `operator`), so Klopot watches Kurier
   with the same request (its `kurier_unreachable` / `kurier_modem_down`
   alerts) — route those to a channel that is **not** SMS.
-- A planned Klopot stop: `DELETE /api/watchdogs/klopot-<channel>` first,
-  or expect the SMS.
+- Klopot never deletes its watchdog. Before a planned Klopot stop longer
+  than the timeout, `DELETE /api/watchdogs/klopot-<channel>` (the next
+  ping registers it again), or expect the SMS.
 
 ## Verifying
 
