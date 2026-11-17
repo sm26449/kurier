@@ -6,6 +6,8 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.15.0] — 2026-11-17
+
 ### Added
 - **Watchdogs** ([ADR-0001](docs/adr/0001-watchdogs.md)): a service checks
   in with `POST /api/watchdogs/{name}/ping` (`timeout_sec`, optional
