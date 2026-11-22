@@ -1,12 +1,12 @@
 # Direct dependencies, pinned. Transitive pins (starlette, pydantic,
 # paho-mqtt) keep rebuilds reproducible and let `pip-audit -r` (CI) and
 # Dependabot see what actually ships.
-fastapi==0.163.0
+fastapi==0.165.0
 starlette==1.10.0
 uvicorn[standard]==0.54.0
 httpx==0.28.1
 aiomqtt==2.5.1
 paho-mqtt==2.2.0
 pydantic==2.14.3
-pydantic-settings==2.16.2
+pydantic-settings==2.16.3
 PyMySQL==1.2.4
